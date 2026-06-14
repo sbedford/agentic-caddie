@@ -2,14 +2,14 @@
 -- COURSES
 -- --------------------------------------------------------
 
-CREATE TABLE courses (
+CREATE TABLE IF NOT EXISTS courses (
     id              INTEGER PRIMARY KEY,
     name            TEXT NOT NULL,
     golf_api_id     TEXT UNIQUE,
-    created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    Created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE tees (
+CREATE TABLE IF NOT EXISTS tees (
     id              INTEGER PRIMARY KEY,
     course_id       INTEGER NOT NULL REFERENCES courses(id),
     name            TEXT NOT NULL,      -- 'white', 'black', 'red', 'gold'
@@ -19,7 +19,7 @@ CREATE TABLE tees (
     UNIQUE(course_id, name)
 );
 
-CREATE TABLE course_holes (
+CREATE TABLE IF NOT EXISTS course_holes (
     id                  INTEGER PRIMARY KEY,
     course_id           INTEGER NOT NULL REFERENCES courses(id),
     hole_number         INTEGER NOT NULL,
@@ -29,7 +29,7 @@ CREATE TABLE course_holes (
     UNIQUE(course_id, hole_number)
 );
 
-CREATE TABLE tee_holes (
+CREATE TABLE IF NOT EXISTS tee_holes (
     id                  INTEGER PRIMARY KEY,
     course_hole_id      INTEGER NOT NULL REFERENCES course_holes(id),
     tee_id              INTEGER NOT NULL REFERENCES tees(id),
@@ -42,7 +42,7 @@ CREATE TABLE tee_holes (
     UNIQUE(course_hole_id, tee_id)
 );
 
-CREATE TABLE hole_points_of_interest (
+CREATE TABLE IF NOT EXISTS hole_points_of_interest (
     id                  INTEGER PRIMARY KEY,
     course_hole_id      INTEGER NOT NULL REFERENCES course_holes(id),
     specific_tee        TEXT,               -- null = all tees, 'white'/'black' = tee-specific
@@ -62,30 +62,19 @@ CREATE TABLE hole_points_of_interest (
 -- --------------------------------------------------------
 
 
-CREATE TABLE players (
+CREATE TABLE IF NOT EXISTS players (
     id              INTEGER PRIMARY KEY,
     name            TEXT NOT NULL,
     handicap        REAL,
     updated_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE player_clubs (
+CREATE TABLE IF NOT EXISTS player_clubs (
     id              INTEGER PRIMARY KEY,
     player_id       INTEGER NOT NULL REFERENCES players(id),
     club_name       TEXT NOT NULL,      -- 'driver', '3_hybrid', '3i', '4i', '5i',
                                         --  '6i', '7i', '8i', '9i', 'pw', 'gw', 'sw'
-    added_date      DATE NOT NULL,
-    removed_date    DATE,               -- null if still in bag
-
-    UNIQUE(player_id, club_name, added_date)
-);
-
-CREATE TABLE player_club_distances (
-    id                  INTEGER PRIMARY KEY,
-    player_id           INTEGER NOT NULL REFERENCES players(id),
-    club_name           TEXT NOT NULL,
-
-    -- carry distances in metres
+ -- carry distances in metres
     carry_avg           REAL,           -- mean, null until GPS data available
     carry_reliable      REAL,           -- 25th percentile, seed manually to start
     carry_max           REAL,           -- 90th percentile, null until GPS data available
@@ -102,12 +91,11 @@ CREATE TABLE player_club_distances (
     UNIQUE(player_id, club_name)
 );
 
-
 -- --------------------------------------------------------
 -- ROUNDS
 -- --------------------------------------------------------
 
-CREATE TABLE rounds (
+CREATE TABLE IF NOT EXISTS rounds (
     id              INTEGER PRIMARY KEY,
     player_id       INTEGER NOT NULL REFERENCES players(id),
     course_id       INTEGER NOT NULL REFERENCES courses(id),
@@ -124,7 +112,7 @@ CREATE TABLE rounds (
     total_points    INTEGER,
     total_putts     INTEGER,
 
-    created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    Created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 
@@ -132,7 +120,7 @@ CREATE TABLE rounds (
 -- HOLES
 -- --------------------------------------------------------
 
-CREATE TABLE holes (
+CREATE TABLE IF NOT EXISTS holes (
     id               INTEGER PRIMARY KEY,
     round_id         INTEGER NOT NULL REFERENCES rounds(id),
     course_hole_id   INTEGER NOT NULL REFERENCES course_holes(id),
@@ -157,7 +145,7 @@ CREATE TABLE holes (
 -- SHOTS
 -- --------------------------------------------------------
 
-CREATE TABLE shots (
+CREATE TABLE IF NOT EXISTS shots (
     id              INTEGER PRIMARY KEY,
     client_uuid     TEXT UNIQUE,        -- device-generated, prevents duplicate sync
     hole_id         INTEGER NOT NULL REFERENCES holes(id),
@@ -191,7 +179,7 @@ CREATE TABLE shots (
 -- Never player-entered
 -- --------------------------------------------------------
 
-CREATE TABLE commentary (
+CREATE TABLE IF NOT EXISTS commentary (
     id              INTEGER PRIMARY KEY,
     scope           TEXT NOT NULL,      -- 'hole' or 'round'
     scope_id        INTEGER NOT NULL,   -- hole_id or round_id

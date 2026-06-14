@@ -26,30 +26,7 @@ VALUES (1, 'Sean Bedford', 8.9, CURRENT_TIMESTAMP);
 -- added_date set to seed date as a reasonable baseline
 -- --------------------------------------------------------
 
-INSERT INTO player_clubs (player_id, club_name, added_date) VALUES
-    (1, 'driver',    '2026-06-14'),
-    (1, '3_hybrid',  '2026-06-14'),
-    (1, '3i',        '2026-06-14'),
-    (1, '4i',        '2026-06-14'),
-    (1, '5i',        '2026-06-14'),
-    (1, '6i',        '2026-06-14'),
-    (1, '7i',        '2026-06-14'),
-    (1, '8i',        '2026-06-14'),
-    (1, '9i',        '2026-06-14'),
-    (1, 'pw',        '2026-06-14'),
-    (1, 'gw',        '2026-06-14'),
-    (1, 'sw',        '2026-06-14');
-
-
--- --------------------------------------------------------
--- player_club_distances
--- Manually seeded reliable carry distances from CSV.
--- carry_avg and carry_max are null — not yet GPS-derived.
--- dispersion_avg_m and dispersion_bias are best estimates.
--- sample_size = 0 flags these as manual seeds throughout.
--- --------------------------------------------------------
-
-INSERT INTO player_club_distances (
+INSERT INTO player_clubs (
     player_id,
     club_name,
     carry_avg,
@@ -73,7 +50,8 @@ INSERT INTO player_club_distances (
     (1, 'gw',       NULL, 100, NULL, 20, 'left', 0, CURRENT_TIMESTAMP),
     (1, 'sw',       NULL,  85, NULL, 20, 'left', 0, CURRENT_TIMESTAMP);
 
-    -- --------------------------------------------------------
+
+-- --------------------------------------------------------
 -- Seed: St Michaels Golf Course
 -- Tees: White (Slope 133, Rating 72), Black (Slope 138, Rating 75)
 -- Holes: 9 (front nine only, holes 1-9)

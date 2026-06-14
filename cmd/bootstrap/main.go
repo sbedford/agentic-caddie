@@ -39,16 +39,6 @@ func main() {
 
 func applySchema(ctx context.Context) error {
 
-	var count int
-	err := db.QueryRowContext(ctx, "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='courses'").Scan(&count)
-	if err != nil {
-		return err
-	}
-	if count > 0 {
-		log.Println("Schema already exists, no action needed")
-		return nil
-	}
-
 	sqlFile, err := os.ReadFile("data/schema/schema.sql")
 	if err != nil {
 		return err
@@ -63,16 +53,6 @@ func applySchema(ctx context.Context) error {
 }
 
 func bootstrapData(ctx context.Context) error {
-	var count int
-	err := db.QueryRowContext(ctx, "SELECT COUNT(*) FROM players").Scan(&count)
-	if err != nil {
-		return err
-	}
-	if count > 0 {
-		log.Println("Data already exists, no action needed")
-		return nil
-	}
-
 	sqlFile, err := os.ReadFile("data/scripts/data.sql")
 	if err != nil {
 		return err
