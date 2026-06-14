@@ -1,0 +1,49 @@
+Hole,Specific Tee,Type,Side,Reference Point,Distance Start,Distance End,Label
+1,,Out_Of_Bounds,Right,Tee,0,,OB all down the right side
+1,,Penalty_Area,Left,Green,150,,Hazard starts 150m from green down the left side
+1,,Out_Of_Bounds,Long,Green,12,,Out of bounds 12m from the back edge of the green
+2,,Carry,,Green,165,,Forced carry from the tee leaves 165 to the green
+2,,Out_Of_Bounds,Right,Tee,0,,OB all down the right side
+2,,Dense Scrub,Left,Green,103,,Heavy scrub down the left side from 103m from the green. Avoid
+2,,Bunker,Right,Green,22.5,9.45,Greenside bunker on the right 22.5m from the centre of the green. 13m wide
+2,,Bunker,Long,Green,0,13,Greenside bunker long 13m from middle of green.
+2,,Bailout,Left,Green,0,17,Bailout area on the left 17m short of centre
+3,,Out_Of_Bounds,Right,Tee,0,,OB all down the right side
+3,,Dense Scrub,Long,Green,0,,Dense scrub right behind the green.  All downhill
+3,,Dense Scrub,Left,Tee,0,,Dense scrub left. Widens nearer the green
+3,,Bailout,Left,Green,24,,Safe landing 24m radius of the green. Prefer left
+4,Black,Carry,,Tee,0,190,Minimum 190m blind carry to edge of fairway
+4,,Water,Right,Green,118,63,Water down the right side. Starts 63m out from the green till 118m out
+4,,Bunker,Left,Green,117,42,Bunkers all down the left side. Starts 42m out till 117 out from green
+4,,Bunker,,Green,21,12,Greenside bunker starts 21m out from green. 9m to cover
+4,,False Front,,Green,0,18,Green has a false front 18m from centre.  Will spin and roll off
+5,,Carry,,Green,47,,Sandy scrub carry ends 47m from green
+5,,Bunker,Left,Green,0,13,Greenside bunker back left 10m from center
+5,,Dense Scrub,Left,Green,63,16,Trees left 63m from green opening up 16m from green
+5,,Bailout,Right,Green,0,16,Bailout area 16m from centre right.
+5,,Dense Scrub,Long,Green,21,,Dense scrub 21m long
+6,Black,Carry,,Tee,180,,180m blind carry from black tees
+6,White,Carry,,Tee,120,,120m carry from elevated white tee
+6,,Water,Right,Green,52,210,Water starts 210m from green till 52m out
+6,,Dense Scrub,Right,Green,339,227,Dense scrub right from 227 to 339m from the green
+6,,Bunker,Left,Green,173,159,Fairway bunker 159-173m from green left
+6,,Bunker,Left,Green,205,192,Fairway bunker 192-205m from green left
+6,,Out_Of_Bounds,Long,Green,25,,Out of bounds 25m from centre of green
+6,,Bailouy,Right,Green,0,21,Bailout area 21m short right of green
+7,,Penalty_Area,Right,Green,289,351,Penalty area right 351m to 289m from the green
+7,,Bunker,Right,Green,108,76,Fairway bunkers right from 76m to 108m out from the green
+7,,Bunker,Left,Green,64,53,Fairway bunkers left from 54m to 63m out from the green
+7,,Bunker,Right,Green,36,22,Fairway bunkers right from 22m to 36m out from the green
+7,,Dense Scrub,Left,Gren,97,,Dense scrub starting 97m out from the green on the left
+7,,Dense Scrub,Long,Gren,29,,Dense scrub behind the green starting 29m from the middle of the green
+8,,Penalty_Area,Left,Green,180,140,Penalty area left starting 180m from the green for 40m
+8,,Penalty_Area,Right,Green,107,47,Hazard on the right starting 47m from the green for 60m
+8,,Bunker,Right,Green,17,9,Greenside bunker 17m from center on the right. 8m to carry
+8,,Out_Of_Bounds,Right,Green,0,22,Out of bounds on the right inline with the green. 22m gap from green centre to OB
+9,,Bunker,Right,Green,41,92,Fairway bunkers on the right starting 41m out from the green. 51m to carry
+9,,Bunker,Left,Green,70,82,Fairway bunkers on the right starting 70m out. 12m to carry
+9,,Bunker,Left,Green,47,55,Fairway bunkers on the right starting 47m out. 8m to carry
+9,,Bunker,Left,Green,28,38,Fairway bunkers on the right starting 28m out. 10m to carry
+9,,Dense Scrub,Left,Green,38,,Dense scrub starting 38m out on the left
+9,,Bailout,Right,Green,10,,Bailout area on the right 10m from centre
+9,,False Front,,Green,12,,Green has a false front 12m from centre.  Will roll off
