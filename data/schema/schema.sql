@@ -1,14 +1,15 @@
-DROP TABLE IF EXISTS courses;
-DROP TABLE IF EXISTS tees;
-DROP TABLE IF EXISTS course_holes;
-DROP TABLE IF EXISTS tee_holes;
-DROP TABLE IF EXISTS hole_points_of_interest;
-DROP TABLE IF EXISTS players;
-DROP TABLE IF EXISTS player_clubs;
-DROP TABLE IF EXISTS rounds;
-DROP TABLE IF EXISTS holes;
-DROP TABLE IF EXISTS shots;
 DROP TABLE IF EXISTS commentary;
+DROP TABLE IF EXISTS shots;
+DROP TABLE IF EXISTS holes;
+DROP TABLE IF EXISTS rounds;
+DROP TABLE IF EXISTS player_clubs;
+DROP TABLE IF EXISTS players;
+DROP TABLE IF EXISTS hole_points_of_interest;
+DROP TABLE IF EXISTS tee_holes;
+DROP TABLE IF EXISTS course_holes;
+DROP TABLE IF EXISTS tees;
+DROP TABLE IF EXISTS courses;
+DROP TABLE IF EXISTS vocabulary;
 
 -- ============================================================
 -- Golf Caddie — SQLite Schema
@@ -32,6 +33,126 @@ DROP TABLE IF EXISTS commentary;
 --   - GPS coordinates on shots (from_lat, from_lng, to_lat, to_lng)
 --   - client_uuid, synced_at on shots (offline sync, Stage 3)
 -- ============================================================
+
+
+-- ============================================================
+-- VOCABULARY
+-- Single source of truth for all enumerated string values.
+-- Every field that accepts a constrained set of strings has an
+-- entry here.  The agent queries this table to discover valid
+-- values before writing; the API validates inserts against it.
+--
+-- domain examples:
+--   'shot_type', 'shot_result', 'shot_miss', 'shot_strike',
+--   'shot_source', 'round_type', 'competition_type',
+--   'flag_position', 'poi_type', 'poi_side'
+-- ============================================================
+
+CREATE TABLE vocabulary (
+    domain      TEXT    NOT NULL,
+    value       TEXT    NOT NULL,   -- stored value: lowercase_with_underscores
+    label       TEXT    NOT NULL,   -- display label: 'Lay-up', 'Out of Bounds', etc.
+    sort_order  INTEGER NOT NULL DEFAULT 0,
+
+    PRIMARY KEY (domain, value)
+);
+
+-- ── shot_type ─────────────────────────────────────────────────────────────────
+INSERT INTO vocabulary (domain, value, label, sort_order) VALUES
+    ('shot_type', 'tee',       'Tee',      1),
+    ('shot_type', 'approach',  'Approach', 2),
+    ('shot_type', 'layup',     'Lay-up',   3),
+    ('shot_type', 'chip',      'Chip',     4),
+    ('shot_type', 'pitch',     'Pitch',    5),
+    ('shot_type', 'bunker',    'Bunker',   6),
+    ('shot_type', 'putt',      'Putt',     7),
+    ('shot_type', 'recovery',  'Recovery', 8);
+
+-- ── shot_result ───────────────────────────────────────────────────────────────
+INSERT INTO vocabulary (domain, value, label, sort_order) VALUES
+    ('shot_result', 'fairway', 'Fairway',       1),
+    ('shot_result', 'rough',   'Rough',         2),
+    ('shot_result', 'bunker',  'Bunker',        3),
+    ('shot_result', 'hazard',  'Hazard',        4),
+    ('shot_result', 'ob',      'Out of Bounds', 5),
+    ('shot_result', 'lost',    'Lost Ball',     6),
+    ('shot_result', 'green',   'Green',         7),
+    ('shot_result', 'holed',   'Holed',         8),
+    ('shot_result', 'unknown', 'Unknown',       9);
+
+-- ── shot_miss ─────────────────────────────────────────────────────────────────
+INSERT INTO vocabulary (domain, value, label, sort_order) VALUES
+    ('shot_miss', 'left',  'Left',  1),
+    ('shot_miss', 'right', 'Right', 2),
+    ('shot_miss', 'short', 'Short', 3),
+    ('shot_miss', 'long',  'Long',  4);
+
+-- ── shot_strike ───────────────────────────────────────────────────────────────
+INSERT INTO vocabulary (domain, value, label, sort_order) VALUES
+    ('shot_strike', 'clean', 'Clean', 1),
+    ('shot_strike', 'thin',  'Thin',  2),
+    ('shot_strike', 'fat',   'Fat',   3),
+    ('shot_strike', 'shank', 'Shank', 4);
+
+-- ── shot_source ───────────────────────────────────────────────────────────────
+INSERT INTO vocabulary (domain, value, label, sort_order) VALUES
+    ('shot_source', 'manual',        'Manual',        1),
+    ('shot_source', 'reconstructed', 'Reconstructed', 2),
+    ('shot_source', 'gps',           'GPS',           3);
+
+-- ── round_type ────────────────────────────────────────────────────────────────
+INSERT INTO vocabulary (domain, value, label, sort_order) VALUES
+    ('round_type', 'competition', 'Competition', 1),
+    ('round_type', 'social',      'Social',      2),
+    ('round_type', 'practice',    'Practice',    3);
+
+-- ── competition_type ──────────────────────────────────────────────────────────
+INSERT INTO vocabulary (domain, value, label, sort_order) VALUES
+    ('competition_type', 'stableford', 'Stableford',  1),
+    ('competition_type', 'stroke',     'Stroke Play', 2),
+    ('competition_type', 'other',      'Other',       3);
+
+-- ── flag_position ─────────────────────────────────────────────────────────────
+INSERT INTO vocabulary (domain, value, label, sort_order) VALUES
+    ('flag_position', 'front_left',    'Front Left',    1),
+    ('flag_position', 'front_centre',  'Front Centre',  2),
+    ('flag_position', 'front_right',   'Front Right',   3),
+    ('flag_position', 'middle_left',   'Middle Left',   4),
+    ('flag_position', 'middle_centre', 'Middle Centre', 5),
+    ('flag_position', 'middle_right',  'Middle Right',  6),
+    ('flag_position', 'back_left',     'Back Left',     7),
+    ('flag_position', 'back_centre',   'Back Centre',   8),
+    ('flag_position', 'back_right',    'Back Right',    9);
+
+-- ── poi_type ──────────────────────────────────────────────────────────────────
+INSERT INTO vocabulary (domain, value, label, sort_order) VALUES
+    ('poi_type', 'out_of_bounds', 'Out of Bounds', 1),
+    ('poi_type', 'penalty_area',  'Penalty Area',  2),
+    ('poi_type', 'bunker',        'Bunker',        3),
+    ('poi_type', 'dense_scrub',   'Dense Scrub',   4),
+    ('poi_type', 'carry',         'Carry',         5),
+    ('poi_type', 'bailout',       'Bailout',       6),
+    ('poi_type', 'elevation',     'Elevation',     7),
+    ('poi_type', 'false_front',   'False Front',   8);
+
+-- ── poi_side ──────────────────────────────────────────────────────────────────
+INSERT INTO vocabulary (domain, value, label, sort_order) VALUES
+    ('poi_side', 'left',  'Left',  1),
+    ('poi_side', 'right', 'Right', 2),
+    ('poi_side', 'front', 'Front', 3),
+    ('poi_side', 'long',  'Long',  4),
+    ('poi_side', 'both',  'Both',  5);
+
+-- ── reference_point ───────────────────────────────────────────────────────────
+INSERT INTO vocabulary (domain, value, label, sort_order) VALUES
+    ('reference_point', 'tee',   'Tee',   1),
+    ('reference_point', 'green', 'Green', 2);
+
+-- ── dispersion_bias ───────────────────────────────────────────────────────────
+INSERT INTO vocabulary (domain, value, label, sort_order) VALUES
+    ('dispersion_bias', 'left',     'Left',     1),
+    ('dispersion_bias', 'right',    'Right',    2),
+    ('dispersion_bias', 'straight', 'Straight', 3);
 
 
 -- ============================================================
@@ -177,6 +298,7 @@ CREATE TABLE rounds (
     played_at       DATE NOT NULL,
     tees            TEXT NOT NULL,          -- 'white', 'black'
     round_type      TEXT NOT NULL,          -- 'competition', 'social', 'practice'
+    competition_type    TEXT,               -- 'stableford', 'stroke', 'other'
     total_score     INTEGER,
     total_points    INTEGER,
     total_putts     INTEGER,

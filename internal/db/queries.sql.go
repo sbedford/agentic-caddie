@@ -184,21 +184,22 @@ func (q *Queries) CreatePlayer(ctx context.Context, arg CreatePlayerParams) (sql
 
 const createRound = `-- name: CreateRound :execresult
 INSERT INTO rounds (
-    player_id, course_id, played_at, tees, round_type,
+    player_id, course_id, played_at, tees, round_type, competition_type,
     total_score, total_points, total_putts, created_at
 )
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
 `
 
 type CreateRoundParams struct {
-	PlayerID    int64
-	CourseID    int64
-	PlayedAt    time.Time
-	Tees        string
-	RoundType   string
-	TotalScore  sql.NullInt64
-	TotalPoints sql.NullInt64
-	TotalPutts  sql.NullInt64
+	PlayerID        int64
+	CourseID        int64
+	PlayedAt        time.Time
+	Tees            string
+	RoundType       string
+	CompetitionType sql.NullString
+	TotalScore      sql.NullInt64
+	TotalPoints     sql.NullInt64
+	TotalPutts      sql.NullInt64
 }
 
 func (q *Queries) CreateRound(ctx context.Context, arg CreateRoundParams) (sql.Result, error) {
@@ -208,6 +209,7 @@ func (q *Queries) CreateRound(ctx context.Context, arg CreateRoundParams) (sql.R
 		arg.PlayedAt,
 		arg.Tees,
 		arg.RoundType,
+		arg.CompetitionType,
 		arg.TotalScore,
 		arg.TotalPoints,
 		arg.TotalPutts,
@@ -295,6 +297,28 @@ func (q *Queries) CreateTeeHole(ctx context.Context, arg CreateTeeHoleParams) (s
 		arg.TeeCentreLat,
 		arg.TeeCentreLng,
 	)
+}
+
+const createVocabularyEntry = `-- name: CreateVocabularyEntry :exec
+INSERT INTO vocabulary (domain, value, label, sort_order)
+VALUES (?, ?, ?, ?)
+`
+
+type CreateVocabularyEntryParams struct {
+	Domain    string
+	Value     string
+	Label     string
+	SortOrder int64
+}
+
+func (q *Queries) CreateVocabularyEntry(ctx context.Context, arg CreateVocabularyEntryParams) error {
+	_, err := q.db.ExecContext(ctx, createVocabularyEntry,
+		arg.Domain,
+		arg.Value,
+		arg.Label,
+		arg.SortOrder,
+	)
+	return err
 }
 
 const deleteClub = `-- name: DeleteClub :exec
@@ -441,6 +465,56 @@ WHERE id = ?
 func (q *Queries) DeleteTeeHole(ctx context.Context, id int64) error {
 	_, err := q.db.ExecContext(ctx, deleteTeeHole, id)
 	return err
+}
+
+const deleteVocabularyEntry = `-- name: DeleteVocabularyEntry :exec
+DELETE FROM vocabulary
+WHERE domain = ?
+  AND value  = ?
+`
+
+type DeleteVocabularyEntryParams struct {
+	Domain string
+	Value  string
+}
+
+func (q *Queries) DeleteVocabularyEntry(ctx context.Context, arg DeleteVocabularyEntryParams) error {
+	_, err := q.db.ExecContext(ctx, deleteVocabularyEntry, arg.Domain, arg.Value)
+	return err
+}
+
+const getAllVocabulary = `-- name: GetAllVocabulary :many
+SELECT domain, value, label, sort_order
+FROM vocabulary
+ORDER BY domain, sort_order
+`
+
+func (q *Queries) GetAllVocabulary(ctx context.Context) ([]Vocabulary, error) {
+	rows, err := q.db.QueryContext(ctx, getAllVocabulary)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Vocabulary
+	for rows.Next() {
+		var i Vocabulary
+		if err := rows.Scan(
+			&i.Domain,
+			&i.Value,
+			&i.Label,
+			&i.SortOrder,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const getClubByID = `-- name: GetClubByID :one
@@ -790,7 +864,7 @@ func (q *Queries) GetPlayerByName(ctx context.Context, name string) (Player, err
 }
 
 const getRoundByID = `-- name: GetRoundByID :one
-SELECT id, player_id, course_id, played_at, tees, round_type,
+SELECT id, player_id, course_id, played_at, tees, round_type, competition_type,
        total_score, total_points, total_putts, created_at
 FROM rounds
 WHERE id = ?
@@ -806,6 +880,7 @@ func (q *Queries) GetRoundByID(ctx context.Context, id int64) (Round, error) {
 		&i.PlayedAt,
 		&i.Tees,
 		&i.RoundType,
+		&i.CompetitionType,
 		&i.TotalScore,
 		&i.TotalPoints,
 		&i.TotalPutts,
@@ -815,7 +890,7 @@ func (q *Queries) GetRoundByID(ctx context.Context, id int64) (Round, error) {
 }
 
 const getRoundByPlayerAndDate = `-- name: GetRoundByPlayerAndDate :one
-SELECT id, player_id, course_id, played_at, tees, round_type,
+SELECT id, player_id, course_id, played_at, tees, round_type, competition_type,
        total_score, total_points, total_putts, created_at
 FROM rounds
 WHERE player_id = ?
@@ -837,6 +912,7 @@ func (q *Queries) GetRoundByPlayerAndDate(ctx context.Context, arg GetRoundByPla
 		&i.PlayedAt,
 		&i.Tees,
 		&i.RoundType,
+		&i.CompetitionType,
 		&i.TotalScore,
 		&i.TotalPoints,
 		&i.TotalPutts,
@@ -1017,6 +1093,69 @@ func (q *Queries) GetTeesByCourse(ctx context.Context, courseID int64) ([]Tee, e
 			&i.Name,
 			&i.SlopeRating,
 			&i.CourseRating,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getVocabularyByDomain = `-- name: GetVocabularyByDomain :many
+
+
+
+SELECT domain, value, label, sort_order
+FROM vocabulary
+WHERE domain = ?
+ORDER BY sort_order
+`
+
+// ============================================================
+// Golf Caddie - sqlc Query Definitions
+// ============================================================
+//
+// One file per logical group, matching the schema table order.
+// All queries use the sqlc annotation format:
+//
+//	-- name: QueryName :return_type
+//
+// Return types:
+//
+//	:one        -> single row, error if not found
+//	:many       -> slice of rows
+//	:exec       -> no rows returned (INSERT/UPDATE/DELETE)
+//	:execresult -> no rows, but returns sql.Result (for LastInsertId)
+//
+// ============================================================
+// ============================================================
+// VOCABULARY
+// Reference data - never inserted or deleted at runtime.
+// GetVocabularyByDomain is the primary call for UI dropdowns and
+// agent pre-flight validation.
+// GetAllVocabulary is the agent bootstrap call to load all enums
+// in one round-trip.
+// ============================================================
+func (q *Queries) GetVocabularyByDomain(ctx context.Context, domain string) ([]Vocabulary, error) {
+	rows, err := q.db.QueryContext(ctx, getVocabularyByDomain, domain)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Vocabulary
+	for rows.Next() {
+		var i Vocabulary
+		if err := rows.Scan(
+			&i.Domain,
+			&i.Value,
+			&i.Label,
+			&i.SortOrder,
 		); err != nil {
 			return nil, err
 		}
@@ -1219,30 +1358,11 @@ func (q *Queries) ListCourseHoles(ctx context.Context, courseID int64) ([]Course
 
 const listCourses = `-- name: ListCourses :many
 
-
-
 SELECT id, name, golf_api_id, created_at
 FROM courses
 ORDER BY name
 `
 
-// ============================================================
-// Golf Caddie - sqlc Query Definitions
-// ============================================================
-//
-// One file per logical group, matching the schema table order.
-// All queries use the sqlc annotation format:
-//
-//	-- name: QueryName :return_type
-//
-// Return types:
-//
-//	:one        -> single row, error if not found
-//	:many       -> slice of rows
-//	:exec       -> no rows returned (INSERT/UPDATE/DELETE)
-//	:execresult -> no rows, but returns sql.Result (for LastInsertId)
-//
-// ============================================================
 // ============================================================
 // COURSES
 // Unique constraints: name, golf_api_id
@@ -1455,12 +1575,11 @@ func (q *Queries) ListPlayers(ctx context.Context) ([]Player, error) {
 	return items, nil
 }
 
-const listRoundsByPlayer = `-- name: ListRoundsByPlayer :many
+const listRounds = `-- name: ListRounds :many
 
-SELECT id, player_id, course_id, played_at, tees, round_type,
+SELECT id, player_id, course_id, played_at, tees, round_type, competition_type,
        total_score, total_points, total_putts, created_at
 FROM rounds
-WHERE player_id = ?
 ORDER BY played_at DESC
 `
 
@@ -1469,6 +1588,49 @@ ORDER BY played_at DESC
 // No single-column unique constraint
 // Primary access patterns: by player, by player+date
 // ============================================================
+func (q *Queries) ListRounds(ctx context.Context) ([]Round, error) {
+	rows, err := q.db.QueryContext(ctx, listRounds)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Round
+	for rows.Next() {
+		var i Round
+		if err := rows.Scan(
+			&i.ID,
+			&i.PlayerID,
+			&i.CourseID,
+			&i.PlayedAt,
+			&i.Tees,
+			&i.RoundType,
+			&i.CompetitionType,
+			&i.TotalScore,
+			&i.TotalPoints,
+			&i.TotalPutts,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listRoundsByPlayer = `-- name: ListRoundsByPlayer :many
+SELECT id, player_id, course_id, played_at, tees, round_type, competition_type,
+       total_score, total_points, total_putts, created_at
+FROM rounds
+WHERE player_id = ?
+ORDER BY played_at DESC
+`
+
 func (q *Queries) ListRoundsByPlayer(ctx context.Context, playerID int64) ([]Round, error) {
 	rows, err := q.db.QueryContext(ctx, listRoundsByPlayer, playerID)
 	if err != nil {
@@ -1485,6 +1647,7 @@ func (q *Queries) ListRoundsByPlayer(ctx context.Context, playerID int64) ([]Rou
 			&i.PlayedAt,
 			&i.Tees,
 			&i.RoundType,
+			&i.CompetitionType,
 			&i.TotalScore,
 			&i.TotalPoints,
 			&i.TotalPutts,
@@ -1504,7 +1667,7 @@ func (q *Queries) ListRoundsByPlayer(ctx context.Context, playerID int64) ([]Rou
 }
 
 const listRoundsByPlayerAndCourse = `-- name: ListRoundsByPlayerAndCourse :many
-SELECT id, player_id, course_id, played_at, tees, round_type,
+SELECT id, player_id, course_id, played_at, tees, round_type, competition_type,
        total_score, total_points, total_putts, created_at
 FROM rounds
 WHERE player_id = ?
@@ -1533,6 +1696,7 @@ func (q *Queries) ListRoundsByPlayerAndCourse(ctx context.Context, arg ListRound
 			&i.PlayedAt,
 			&i.Tees,
 			&i.RoundType,
+			&i.CompetitionType,
 			&i.TotalScore,
 			&i.TotalPoints,
 			&i.TotalPutts,
@@ -2007,4 +2171,45 @@ func (q *Queries) UpdateTeeHole(ctx context.Context, arg UpdateTeeHoleParams) er
 		arg.ID,
 	)
 	return err
+}
+
+const updateVocabularyEntry = `-- name: UpdateVocabularyEntry :exec
+UPDATE vocabulary
+SET label      = ?,
+    sort_order = ?
+WHERE domain = ?
+  AND value  = ?
+`
+
+type UpdateVocabularyEntryParams struct {
+	Label     string
+	SortOrder int64
+	Domain    string
+	Value     string
+}
+
+func (q *Queries) UpdateVocabularyEntry(ctx context.Context, arg UpdateVocabularyEntryParams) error {
+	_, err := q.db.ExecContext(ctx, updateVocabularyEntry,
+		arg.Label,
+		arg.SortOrder,
+		arg.Domain,
+		arg.Value,
+	)
+	return err
+}
+
+const vocabValueExists = `-- name: VocabValueExists :one
+SELECT COUNT(*) FROM vocabulary WHERE domain = ? AND value = ?
+`
+
+type VocabValueExistsParams struct {
+	Domain string
+	Value  string
+}
+
+func (q *Queries) VocabValueExists(ctx context.Context, arg VocabValueExistsParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, vocabValueExists, arg.Domain, arg.Value)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
 }

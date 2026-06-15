@@ -48,8 +48,9 @@ func main() {
 	r.Mount("/clubs", clubRoutes(queries))
 	r.Mount("/rounds", roundRoutes(queries))
 	r.Mount("/holes", holeRoutes(queries))
-	r.Mount("/shots", shotRoutes(queries))
+	r.Mount("/shots", shotRoutes(queries, database))
 	r.Mount("/commentary", commentaryRoutes(queries))
+	r.Mount("/vocabulary", vocabularyRoutes(queries))
 
 	log.Println("Server listening on :3000")
 	log.Fatal(http.ListenAndServe(":3000", r))
@@ -147,6 +148,7 @@ func clubRoutes(queries *db.Queries) chi.Router {
 func roundRoutes(queries *db.Queries) chi.Router {
 	h := handlers.RoundsHandler{Queries: queries}
 	r := chi.NewRouter()
+	r.Get("/", h.ListRounds)
 	r.Get("/player/{playerId}", h.ListRoundsByPlayer)
 	r.Get("/player/{playerId}/course/{courseId}", h.ListRoundsByPlayerAndCourse)
 	r.Get("/player/{playerId}/date/{date}", h.GetRoundByPlayerAndDate)
@@ -169,17 +171,29 @@ func holeRoutes(queries *db.Queries) chi.Router {
 	return r
 }
 
-func shotRoutes(queries *db.Queries) chi.Router {
-	h := handlers.ShotsHandler{Queries: queries}
+func shotRoutes(queries *db.Queries, database *sql.DB) chi.Router {
+	h := handlers.ShotsHandler{Queries: queries, DB: database}
 	r := chi.NewRouter()
 	r.Get("/hole/{holeId}", h.ListShotsByHole)
 	r.Get("/hole/{holeId}/type/{shotType}", h.ListShotsByHoleAndType)
 	r.Get("/hole/{holeId}/number/{shotNumber}", h.GetShotByHoleAndNumber)
+	r.Post("/hole/{holeId}/reorder", h.ReorderShots)
 	r.Delete("/hole/{holeId}", h.DeleteShotsByHole)
 	r.Post("/", h.CreateShot)
 	r.Get("/{id}", h.GetShotByID)
 	r.Put("/{id}", h.UpdateShot)
 	r.Delete("/{id}", h.DeleteShot)
+	return r
+}
+
+func vocabularyRoutes(queries *db.Queries) chi.Router {
+	h := handlers.VocabularyHandler{Queries: queries}
+	r := chi.NewRouter()
+	r.Get("/", h.GetAllVocabulary)
+	r.Post("/", h.CreateVocabularyEntry)
+	r.Get("/{domain}", h.GetVocabularyByDomain)
+	r.Put("/{domain}/{value}", h.UpdateVocabularyEntry)
+	r.Delete("/{domain}/{value}", h.DeleteVocabularyEntry)
 	return r
 }
 

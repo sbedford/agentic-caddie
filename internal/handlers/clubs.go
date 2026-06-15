@@ -305,6 +305,8 @@ func (h ClubsHandler) CreateClub(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()
 
+	if !checkOptVocab(w, ctx, h.Queries, "dispersion_bias", req.DispersionBias) { return }
+
 	params := db.CreateClubParams{
 		PlayerID:   req.PlayerID,
 		ClubName:   req.ClubName,
@@ -424,6 +426,8 @@ func (h ClubsHandler) UpdateClubDistances(w http.ResponseWriter, r *http.Request
 
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()
+
+	if !checkOptVocab(w, ctx, h.Queries, "dispersion_bias", req.DispersionBias) { return }
 
 	params := db.UpdateClubDistancesParams{ID: id, SampleSize: req.SampleSize}
 	if req.CarryAvg != nil {

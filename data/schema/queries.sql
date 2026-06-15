@@ -15,6 +15,46 @@
 
 
 -- ============================================================
+-- VOCABULARY
+-- Reference data - never inserted or deleted at runtime.
+-- GetVocabularyByDomain is the primary call for UI dropdowns and
+-- agent pre-flight validation.
+-- GetAllVocabulary is the agent bootstrap call to load all enums
+-- in one round-trip.
+-- ============================================================
+
+-- name: GetVocabularyByDomain :many
+SELECT domain, value, label, sort_order
+FROM vocabulary
+WHERE domain = ?
+ORDER BY sort_order;
+
+-- name: GetAllVocabulary :many
+SELECT domain, value, label, sort_order
+FROM vocabulary
+ORDER BY domain, sort_order;
+
+-- name: CreateVocabularyEntry :exec
+INSERT INTO vocabulary (domain, value, label, sort_order)
+VALUES (?, ?, ?, ?);
+
+-- name: UpdateVocabularyEntry :exec
+UPDATE vocabulary
+SET label      = ?,
+    sort_order = ?
+WHERE domain = ?
+  AND value  = ?;
+
+-- name: DeleteVocabularyEntry :exec
+DELETE FROM vocabulary
+WHERE domain = ?
+  AND value  = ?;
+
+-- name: VocabValueExists :one
+SELECT COUNT(*) FROM vocabulary WHERE domain = ? AND value = ?;
+
+
+-- ============================================================
 -- COURSES
 -- Unique constraints: name, golf_api_id
 -- ============================================================
@@ -351,15 +391,21 @@ WHERE id = ?;
 -- Primary access patterns: by player, by player+date
 -- ============================================================
 
+-- name: ListRounds :many
+SELECT id, player_id, course_id, played_at, tees, round_type, competition_type,
+       total_score, total_points, total_putts, created_at
+FROM rounds
+ORDER BY played_at DESC;
+
 -- name: ListRoundsByPlayer :many
-SELECT id, player_id, course_id, played_at, tees, round_type,
+SELECT id, player_id, course_id, played_at, tees, round_type, competition_type,
        total_score, total_points, total_putts, created_at
 FROM rounds
 WHERE player_id = ?
 ORDER BY played_at DESC;
 
 -- name: ListRoundsByPlayerAndCourse :many
-SELECT id, player_id, course_id, played_at, tees, round_type,
+SELECT id, player_id, course_id, played_at, tees, round_type, competition_type,
        total_score, total_points, total_putts, created_at
 FROM rounds
 WHERE player_id = ?
@@ -367,13 +413,13 @@ WHERE player_id = ?
 ORDER BY played_at DESC;
 
 -- name: GetRoundByID :one
-SELECT id, player_id, course_id, played_at, tees, round_type,
+SELECT id, player_id, course_id, played_at, tees, round_type, competition_type,
        total_score, total_points, total_putts, created_at
 FROM rounds
 WHERE id = ?;
 
 -- name: GetRoundByPlayerAndDate :one
-SELECT id, player_id, course_id, played_at, tees, round_type,
+SELECT id, player_id, course_id, played_at, tees, round_type, competition_type,
        total_score, total_points, total_putts, created_at
 FROM rounds
 WHERE player_id = ?
@@ -381,10 +427,10 @@ WHERE player_id = ?
 
 -- name: CreateRound :execresult
 INSERT INTO rounds (
-    player_id, course_id, played_at, tees, round_type,
+    player_id, course_id, played_at, tees, round_type, competition_type,
     total_score, total_points, total_putts, created_at
 )
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP);
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP);
 
 -- name: UpdateRoundTotals :exec
 -- Called after holes are inserted/updated to refresh denormalised totals

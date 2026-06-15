@@ -215,6 +215,8 @@ func (h HolesHandler) CreateHole(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()
 
+	if !checkOptVocab(w, ctx, h.Queries, "flag_position", req.FlagPosition) { return }
+
 	params := db.CreateHoleParams{
 		RoundID:      req.RoundID,
 		CourseHoleID: req.CourseHoleID,
@@ -293,6 +295,8 @@ func (h HolesHandler) UpdateHole(w http.ResponseWriter, r *http.Request) {
 
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()
+
+	if !checkOptVocab(w, ctx, h.Queries, "flag_position", req.FlagPosition) { return }
 
 	params := db.UpdateHoleParams{ID: id}
 	if req.FlagPosition != nil {

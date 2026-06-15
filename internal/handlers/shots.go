@@ -16,6 +16,11 @@ import (
 
 type ShotsHandler struct {
 	Queries *db.Queries
+	DB      *sql.DB
+}
+
+type reorderShotsRequest struct {
+	IDs []int64 `json:"ids"`
 }
 
 type shotResponse struct {
@@ -252,6 +257,12 @@ func (h ShotsHandler) CreateShot(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()
 
+	if !checkVocab(w, ctx, h.Queries, "shot_type", req.ShotType) { return }
+	if !checkVocab(w, ctx, h.Queries, "shot_source", req.Source) { return }
+	if !checkOptVocab(w, ctx, h.Queries, "shot_result", req.Result) { return }
+	if !checkOptVocab(w, ctx, h.Queries, "shot_miss", req.Miss) { return }
+	if !checkOptVocab(w, ctx, h.Queries, "shot_strike", req.StrikeQuality) { return }
+
 	params := db.CreateShotParams{
 		HoleID:     req.HoleID,
 		ShotNumber: req.ShotNumber,
@@ -323,6 +334,12 @@ func (h ShotsHandler) UpdateShot(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()
 
+	if !checkVocab(w, ctx, h.Queries, "shot_type", req.ShotType) { return }
+	if !checkVocab(w, ctx, h.Queries, "shot_source", req.Source) { return }
+	if !checkOptVocab(w, ctx, h.Queries, "shot_result", req.Result) { return }
+	if !checkOptVocab(w, ctx, h.Queries, "shot_miss", req.Miss) { return }
+	if !checkOptVocab(w, ctx, h.Queries, "shot_strike", req.StrikeQuality) { return }
+
 	params := db.UpdateShotParams{ID: id, ShotType: req.ShotType, Source: req.Source}
 	if req.Club != nil {
 		params.Club = sql.NullString{String: *req.Club, Valid: true}
@@ -393,6 +410,72 @@ func (h ShotsHandler) DeleteShotsByHole(w http.ResponseWriter, r *http.Request) 
 
 	if err = h.Queries.DeleteShotsByHole(ctx, holeID); err != nil {
 		log.Printf("failed to delete shots: %v", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// ReorderShots godoc
+// @Summary     Reorder shots for a hole
+// @Tags        shots
+// @Accept      json
+// @Param       holeId path int                true "Hole ID"
+// @Param       body   body reorderShotsRequest true "Ordered shot IDs"
+// @Success     204
+// @Failure     400 {string} string "Invalid request"
+// @Failure     500 {string} string "Internal server error"
+// @Router      /shots/hole/{holeId}/reorder [post]
+func (h ShotsHandler) ReorderShots(w http.ResponseWriter, r *http.Request) {
+	holeID, err := strconv.ParseInt(chi.URLParam(r, "holeId"), 10, 64)
+	if err != nil {
+		http.Error(w, "Invalid hole ID", http.StatusBadRequest)
+		return
+	}
+
+	var req reorderShotsRequest
+	if err = json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+	if len(req.IDs) == 0 {
+		http.Error(w, "ids must not be empty", http.StatusBadRequest)
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+
+	tx, err := h.DB.BeginTx(ctx, nil)
+	if err != nil {
+		log.Printf("failed to begin transaction: %v", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+	defer tx.Rollback() //nolint:errcheck
+
+	// Shift all shot_numbers to a high range to avoid unique constraint conflicts
+	if _, err = tx.ExecContext(ctx,
+		"UPDATE shots SET shot_number = shot_number + 10000 WHERE hole_id = ?", holeID); err != nil {
+		log.Printf("failed to shift shot numbers: %v", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	// Assign final positions in the requested order
+	for i, id := range req.IDs {
+		if _, err = tx.ExecContext(ctx,
+			"UPDATE shots SET shot_number = ? WHERE id = ? AND hole_id = ?",
+			i+1, id, holeID); err != nil {
+			log.Printf("failed to assign shot number: %v", err)
+			http.Error(w, "Internal server error", http.StatusInternalServerError)
+			return
+		}
+	}
+
+	if err = tx.Commit(); err != nil {
+		log.Printf("failed to commit reorder transaction: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}

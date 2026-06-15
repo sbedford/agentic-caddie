@@ -81,16 +81,17 @@ type PlayerClub struct {
 }
 
 type Round struct {
-	ID          int64
-	PlayerID    int64
-	CourseID    int64
-	PlayedAt    time.Time
-	Tees        string
-	RoundType   string
-	TotalScore  sql.NullInt64
-	TotalPoints sql.NullInt64
-	TotalPutts  sql.NullInt64
-	CreatedAt   time.Time
+	ID              int64
+	PlayerID        int64
+	CourseID        int64
+	PlayedAt        time.Time
+	Tees            string
+	RoundType       string
+	CompetitionType sql.NullString
+	TotalScore      sql.NullInt64
+	TotalPoints     sql.NullInt64
+	TotalPutts      sql.NullInt64
+	CreatedAt       time.Time
 }
 
 type Shot struct {
@@ -122,4 +123,11 @@ type TeeHole struct {
 	Distance     int64
 	TeeCentreLat sql.NullFloat64
 	TeeCentreLng sql.NullFloat64
+}
+
+type Vocabulary struct {
+	Domain    string
+	Value     string
+	Label     string
+	SortOrder int64
 }

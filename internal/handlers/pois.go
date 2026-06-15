@@ -204,6 +204,10 @@ func (h POIsHandler) CreatePOI(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()
 
+	if !checkVocab(w, ctx, h.Queries, "poi_type", req.PoiType) { return }
+	if !checkOptVocab(w, ctx, h.Queries, "poi_side", req.Side) { return }
+	if !checkOptVocab(w, ctx, h.Queries, "reference_point", req.ReferencePoint) { return }
+
 	params := db.CreatePOIParams{
 		CourseHoleID: req.CourseHoleID,
 		PoiType:      req.PoiType,
@@ -276,6 +280,10 @@ func (h POIsHandler) UpdatePOI(w http.ResponseWriter, r *http.Request) {
 
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()
+
+	if !checkVocab(w, ctx, h.Queries, "poi_type", req.PoiType) { return }
+	if !checkOptVocab(w, ctx, h.Queries, "poi_side", req.Side) { return }
+	if !checkOptVocab(w, ctx, h.Queries, "reference_point", req.ReferencePoint) { return }
 
 	params := db.UpdatePOIParams{ID: id, PoiType: req.PoiType, Label: req.Label}
 	if req.SpecificTee != nil {

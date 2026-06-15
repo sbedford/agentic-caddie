@@ -19,38 +19,71 @@ type RoundsHandler struct {
 }
 
 type roundResponse struct {
-	ID          int64     `json:"id"`
-	PlayerID    int64     `json:"player_id"`
-	CourseID    int64     `json:"course_id"`
-	PlayedAt    time.Time `json:"played_at"`
-	Tees        string    `json:"tees"`
-	RoundType   string    `json:"round_type"`
-	TotalScore  *int64    `json:"total_score"`
-	TotalPoints *int64    `json:"total_points"`
-	TotalPutts  *int64    `json:"total_putts"`
-	CreatedAt   time.Time `json:"created_at"`
+	ID              int64     `json:"id"`
+	PlayerID        int64     `json:"player_id"`
+	CourseID        int64     `json:"course_id"`
+	PlayedAt        time.Time `json:"played_at"`
+	Tees            string    `json:"tees"`
+	RoundType       string    `json:"round_type"`
+	CompetitionType *string   `json:"competition_type"`
+	TotalScore      *int64    `json:"total_score"`
+	TotalPoints     *int64    `json:"total_points"`
+	TotalPutts      *int64    `json:"total_putts"`
+	CreatedAt       time.Time `json:"created_at"`
 }
 
 type createRoundRequest struct {
-	PlayerID  int64  `json:"player_id"  example:"1"`
-	CourseID  int64  `json:"course_id"  example:"1"`
-	PlayedAt  string `json:"played_at"  example:"2024-06-01"`
-	Tees      string `json:"tees"       example:"white"`
-	RoundType string `json:"round_type" example:"social"`
+	PlayerID        int64  `json:"player_id"  example:"1"`
+	CourseID        int64  `json:"course_id"  example:"1"`
+	PlayedAt        string `json:"played_at"  example:"2024-06-01"`
+	Tees            string `json:"tees"       example:"white"`
+	RoundType       string `json:"round_type" example:"social"`
+	CompetitionType string `json:"competition_type"  example:"stableford"`
 }
 
 func toRoundResponse(r db.Round) roundResponse {
 	return roundResponse{
-		ID:          r.ID,
-		PlayerID:    r.PlayerID,
-		CourseID:    r.CourseID,
-		PlayedAt:    r.PlayedAt,
-		Tees:        r.Tees,
-		RoundType:   r.RoundType,
-		TotalScore:  nullableInt64(r.TotalScore),
-		TotalPoints: nullableInt64(r.TotalPoints),
-		TotalPutts:  nullableInt64(r.TotalPutts),
-		CreatedAt:   r.CreatedAt,
+		ID:              r.ID,
+		PlayerID:        r.PlayerID,
+		CourseID:        r.CourseID,
+		PlayedAt:        r.PlayedAt,
+		Tees:            r.Tees,
+		RoundType:       r.RoundType,
+		CompetitionType: nullableString(r.CompetitionType),
+		TotalScore:      nullableInt64(r.TotalScore),
+		TotalPoints:     nullableInt64(r.TotalPoints),
+		TotalPutts:      nullableInt64(r.TotalPutts),
+		CreatedAt:       r.CreatedAt,
+	}
+}
+
+// ListRounds godoc
+// @Summary     List all rounds
+// @Tags        rounds
+// @Produce     json
+// @Success     200      {array}  roundResponse
+// @Failure     400      {string} string "Invalid player ID"
+// @Failure     500      {string} string "Internal server error"
+// @Router      /rounds [get]
+func (h RoundsHandler) ListRounds(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+
+	rounds, err := h.Queries.ListRounds(ctx)
+	if err != nil {
+		log.Printf("failed to list rounds: %v", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	resp := make([]roundResponse, len(rounds))
+	for i, rnd := range rounds {
+		resp[i] = toRoundResponse(rnd)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	if err = json.NewEncoder(w).Encode(resp); err != nil {
+		http.Error(w, "Internal error", http.StatusInternalServerError)
 	}
 }
 
@@ -249,6 +282,9 @@ func (h RoundsHandler) CreateRound(w http.ResponseWriter, r *http.Request) {
 
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()
+
+	if !checkVocab(w, ctx, h.Queries, "round_type", req.RoundType) { return }
+	if req.CompetitionType != "" && !checkVocab(w, ctx, h.Queries, "competition_type", req.CompetitionType) { return }
 
 	result, err := h.Queries.CreateRound(ctx, db.CreateRoundParams{
 		PlayerID:  req.PlayerID,
