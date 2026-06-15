@@ -184,10 +184,10 @@ func (q *Queries) CreatePlayer(ctx context.Context, arg CreatePlayerParams) (sql
 
 const createRound = `-- name: CreateRound :execresult
 INSERT INTO rounds (
-    player_id, course_id, played_at, tees, round_type, competition_type,
+    player_id, course_id, played_at, tees, daily_handicap, round_type, competition_type,
     total_score, total_points, total_putts, created_at
 )
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
 `
 
 type CreateRoundParams struct {
@@ -195,6 +195,7 @@ type CreateRoundParams struct {
 	CourseID        int64
 	PlayedAt        time.Time
 	Tees            string
+	DailyHandicap   int64
 	RoundType       string
 	CompetitionType sql.NullString
 	TotalScore      sql.NullInt64
@@ -208,6 +209,7 @@ func (q *Queries) CreateRound(ctx context.Context, arg CreateRoundParams) (sql.R
 		arg.CourseID,
 		arg.PlayedAt,
 		arg.Tees,
+		arg.DailyHandicap,
 		arg.RoundType,
 		arg.CompetitionType,
 		arg.TotalScore,
@@ -864,7 +866,7 @@ func (q *Queries) GetPlayerByName(ctx context.Context, name string) (Player, err
 }
 
 const getRoundByID = `-- name: GetRoundByID :one
-SELECT id, player_id, course_id, played_at, tees, round_type, competition_type,
+SELECT id, player_id, course_id, played_at, daily_handicap, tees, round_type, competition_type,
        total_score, total_points, total_putts, created_at
 FROM rounds
 WHERE id = ?
@@ -878,6 +880,7 @@ func (q *Queries) GetRoundByID(ctx context.Context, id int64) (Round, error) {
 		&i.PlayerID,
 		&i.CourseID,
 		&i.PlayedAt,
+		&i.DailyHandicap,
 		&i.Tees,
 		&i.RoundType,
 		&i.CompetitionType,
@@ -890,7 +893,7 @@ func (q *Queries) GetRoundByID(ctx context.Context, id int64) (Round, error) {
 }
 
 const getRoundByPlayerAndDate = `-- name: GetRoundByPlayerAndDate :one
-SELECT id, player_id, course_id, played_at, tees, round_type, competition_type,
+SELECT id, player_id, course_id, played_at, daily_handicap, tees, round_type, competition_type,
        total_score, total_points, total_putts, created_at
 FROM rounds
 WHERE player_id = ?
@@ -910,6 +913,7 @@ func (q *Queries) GetRoundByPlayerAndDate(ctx context.Context, arg GetRoundByPla
 		&i.PlayerID,
 		&i.CourseID,
 		&i.PlayedAt,
+		&i.DailyHandicap,
 		&i.Tees,
 		&i.RoundType,
 		&i.CompetitionType,
@@ -1577,7 +1581,7 @@ func (q *Queries) ListPlayers(ctx context.Context) ([]Player, error) {
 
 const listRounds = `-- name: ListRounds :many
 
-SELECT id, player_id, course_id, played_at, tees, round_type, competition_type,
+SELECT id, player_id, course_id, played_at, daily_handicap, tees, round_type, competition_type,
        total_score, total_points, total_putts, created_at
 FROM rounds
 ORDER BY played_at DESC
@@ -1602,6 +1606,7 @@ func (q *Queries) ListRounds(ctx context.Context) ([]Round, error) {
 			&i.PlayerID,
 			&i.CourseID,
 			&i.PlayedAt,
+			&i.DailyHandicap,
 			&i.Tees,
 			&i.RoundType,
 			&i.CompetitionType,
@@ -1624,7 +1629,7 @@ func (q *Queries) ListRounds(ctx context.Context) ([]Round, error) {
 }
 
 const listRoundsByPlayer = `-- name: ListRoundsByPlayer :many
-SELECT id, player_id, course_id, played_at, tees, round_type, competition_type,
+SELECT id, player_id, course_id, played_at, daily_handicap, tees, round_type, competition_type,
        total_score, total_points, total_putts, created_at
 FROM rounds
 WHERE player_id = ?
@@ -1645,6 +1650,7 @@ func (q *Queries) ListRoundsByPlayer(ctx context.Context, playerID int64) ([]Rou
 			&i.PlayerID,
 			&i.CourseID,
 			&i.PlayedAt,
+			&i.DailyHandicap,
 			&i.Tees,
 			&i.RoundType,
 			&i.CompetitionType,
@@ -1667,7 +1673,7 @@ func (q *Queries) ListRoundsByPlayer(ctx context.Context, playerID int64) ([]Rou
 }
 
 const listRoundsByPlayerAndCourse = `-- name: ListRoundsByPlayerAndCourse :many
-SELECT id, player_id, course_id, played_at, tees, round_type, competition_type,
+SELECT id, player_id, course_id, played_at, daily_handicap, tees, round_type, competition_type,
        total_score, total_points, total_putts, created_at
 FROM rounds
 WHERE player_id = ?
@@ -1694,6 +1700,7 @@ func (q *Queries) ListRoundsByPlayerAndCourse(ctx context.Context, arg ListRound
 			&i.PlayerID,
 			&i.CourseID,
 			&i.PlayedAt,
+			&i.DailyHandicap,
 			&i.Tees,
 			&i.RoundType,
 			&i.CompetitionType,

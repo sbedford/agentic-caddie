@@ -392,20 +392,20 @@ WHERE id = ?;
 -- ============================================================
 
 -- name: ListRounds :many
-SELECT id, player_id, course_id, played_at, tees, round_type, competition_type,
+SELECT id, player_id, course_id, played_at, daily_handicap, tees, round_type, competition_type,
        total_score, total_points, total_putts, created_at
 FROM rounds
 ORDER BY played_at DESC;
 
 -- name: ListRoundsByPlayer :many
-SELECT id, player_id, course_id, played_at, tees, round_type, competition_type,
+SELECT id, player_id, course_id, played_at, daily_handicap, tees, round_type, competition_type,
        total_score, total_points, total_putts, created_at
 FROM rounds
 WHERE player_id = ?
 ORDER BY played_at DESC;
 
 -- name: ListRoundsByPlayerAndCourse :many
-SELECT id, player_id, course_id, played_at, tees, round_type, competition_type,
+SELECT id, player_id, course_id, played_at, daily_handicap, tees, round_type, competition_type,
        total_score, total_points, total_putts, created_at
 FROM rounds
 WHERE player_id = ?
@@ -413,13 +413,13 @@ WHERE player_id = ?
 ORDER BY played_at DESC;
 
 -- name: GetRoundByID :one
-SELECT id, player_id, course_id, played_at, tees, round_type, competition_type,
+SELECT id, player_id, course_id, played_at, daily_handicap, tees, round_type, competition_type,
        total_score, total_points, total_putts, created_at
 FROM rounds
 WHERE id = ?;
 
 -- name: GetRoundByPlayerAndDate :one
-SELECT id, player_id, course_id, played_at, tees, round_type, competition_type,
+SELECT id, player_id, course_id, played_at, daily_handicap, tees, round_type, competition_type,
        total_score, total_points, total_putts, created_at
 FROM rounds
 WHERE player_id = ?
@@ -427,10 +427,10 @@ WHERE player_id = ?
 
 -- name: CreateRound :execresult
 INSERT INTO rounds (
-    player_id, course_id, played_at, tees, round_type, competition_type,
+    player_id, course_id, played_at, tees, daily_handicap, round_type, competition_type,
     total_score, total_points, total_putts, created_at
 )
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP);
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP);
 
 -- name: UpdateRoundTotals :exec
 -- Called after holes are inserted/updated to refresh denormalised totals

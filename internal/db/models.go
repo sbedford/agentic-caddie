@@ -85,6 +85,7 @@ type Round struct {
 	PlayerID        int64
 	CourseID        int64
 	PlayedAt        time.Time
+	DailyHandicap   int64
 	Tees            string
 	RoundType       string
 	CompetitionType sql.NullString

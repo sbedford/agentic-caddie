@@ -8,7 +8,7 @@ type Player = { id: number; name: string }
 type Course = { id: number; name: string }
 type Round = {
   id: number; player_id: number; course_id: number
-  played_at: string; tees: string; round_type: string
+  played_at: string; tees: string; daily_handicap: number; round_type: string
   total_score: number | null; total_points: number | null; total_putts: number | null
 }
 type Hole = {
@@ -774,7 +774,7 @@ function RoundDetail({ round: initialRound, playerMap, courseMap, onBack, onNavi
           <div className="round-hero-meta">
             <a href="#" className="round-hero-player-link"
               onClick={e => { e.preventDefault(); onNavigate({ section: 'Players', entityId: round.player_id }) }}>
-              {playerMap[round.player_id] ?? `Player ${round.player_id}`}
+              {playerMap[round.player_id] ?? `Player ${round.player_id}`} ({round.daily_handicap})
             </a>
             <span className="round-hero-sep">·</span>
             <span>{round.tees}</span>
@@ -846,6 +846,7 @@ function RoundsDashboard({ playerMap, courseMap, onSelectRound, onNavigate }: {
               <div className="round-card-tags">
                 <span className="round-tag">{r.tees}</span>
                 <span className="round-tag">{r.round_type}</span>
+                <span className="round-tag">+{r.daily_handicap}</span>
               </div>
               <div className="round-card-stats">
                 <div className="round-card-stat">

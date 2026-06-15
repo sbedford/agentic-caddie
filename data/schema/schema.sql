@@ -296,6 +296,7 @@ CREATE TABLE rounds (
     player_id       INTEGER NOT NULL REFERENCES players(id),
     course_id       INTEGER NOT NULL REFERENCES courses(id),
     played_at       DATE NOT NULL,
+    daily_handicap  INTEGER NOT NULL,
     tees            TEXT NOT NULL,          -- 'white', 'black'
     round_type      TEXT NOT NULL,          -- 'competition', 'social', 'practice'
     competition_type    TEXT,               -- 'stableford', 'stroke', 'other'

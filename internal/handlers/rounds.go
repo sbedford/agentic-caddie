@@ -23,6 +23,7 @@ type roundResponse struct {
 	CourseID        int64     `json:"course_id"`
 	PlayedAt        time.Time `json:"played_at"`
 	Tees            string    `json:"tees"`
+	DailyHandicap   int64     `json:"daily_handicap"`
 	RoundType       string    `json:"round_type"`
 	CompetitionType *string   `json:"competition_type"`
 	TotalScore      *int64    `json:"total_score"`
@@ -32,12 +33,13 @@ type roundResponse struct {
 }
 
 type createRoundRequest struct {
-	PlayerID        int64  `json:"player_id"  example:"1"`
-	CourseID        int64  `json:"course_id"  example:"1"`
-	PlayedAt        string `json:"played_at"  example:"2024-06-01"`
-	Tees            string `json:"tees"       example:"white"`
-	RoundType       string `json:"round_type" example:"social"`
-	CompetitionType string `json:"competition_type"  example:"stableford"`
+	PlayerID        int64  `json:"player_id"       example:"1"`
+	CourseID        int64  `json:"course_id"       example:"1"`
+	PlayedAt        string `json:"played_at"       example:"2024-06-01"`
+	Tees            string `json:"tees"            example:"white"`
+	DailyHandicap   int64  `json:"daily_handicap"  example:"18"`
+	RoundType       string `json:"round_type"      example:"social"`
+	CompetitionType string `json:"competition_type" example:"stableford"`
 }
 
 func toRoundResponse(r db.Round) roundResponse {
@@ -47,6 +49,7 @@ func toRoundResponse(r db.Round) roundResponse {
 		CourseID:        r.CourseID,
 		PlayedAt:        r.PlayedAt,
 		Tees:            r.Tees,
+		DailyHandicap:   r.DailyHandicap,
 		RoundType:       r.RoundType,
 		CompetitionType: nullableString(r.CompetitionType),
 		TotalScore:      nullableInt64(r.TotalScore),
@@ -258,6 +261,10 @@ func (h RoundsHandler) CreateRound(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "player_id, course_id, played_at, tees and round_type are required", http.StatusBadRequest)
 		return
 	}
+	if req.DailyHandicap < 0 {
+		http.Error(w, "daily_handicap must be 0 or greater", http.StatusBadRequest)
+		return
+	}
 
 	playedAt, err := time.Parse("2006-01-02", req.PlayedAt)
 	if err != nil {
@@ -273,11 +280,12 @@ func (h RoundsHandler) CreateRound(w http.ResponseWriter, r *http.Request) {
 	}
 
 	result, err := h.Queries.CreateRound(r.Context(), db.CreateRoundParams{
-		PlayerID:  req.PlayerID,
-		CourseID:  req.CourseID,
-		PlayedAt:  playedAt,
-		Tees:      req.Tees,
-		RoundType: req.RoundType,
+		PlayerID:      req.PlayerID,
+		CourseID:      req.CourseID,
+		PlayedAt:      playedAt,
+		Tees:          req.Tees,
+		DailyHandicap: req.DailyHandicap,
+		RoundType:     req.RoundType,
 	})
 	if err != nil {
 		log.Printf("failed to create round: %v", err)
