@@ -1,15 +1,20 @@
 package config
 
-import "fmt"
+import (
+	"fmt"
+	"os"
+)
 
 type DatabaseConfig struct {
 	Path string
 }
 
 func Load() DatabaseConfig {
-	return DatabaseConfig{
-		Path: "data/app.db",
+	path := os.Getenv("DATABASE_PATH")
+	if path == "" {
+		path = "data/app.db"
 	}
+	return DatabaseConfig{Path: path}
 }
 
 func (c DatabaseConfig) DSN() string {

@@ -33,19 +33,17 @@ type CourseHole struct {
 }
 
 type Hole struct {
-	ID              int64
-	RoundID         int64
-	CourseHoleID    int64
-	HoleNumber      int64
-	FlagPosition    sql.NullString
-	Score           sql.NullInt64
-	Points          sql.NullInt64
-	Putts           sql.NullInt64
-	Gir             sql.NullBool
-	FairwayHit      sql.NullBool
-	ScrambleAttempt sql.NullBool
-	ScrambleSave    sql.NullBool
-	Penalty         sql.NullBool
+	ID           int64
+	RoundID      int64
+	CourseHoleID int64
+	HoleNumber   int64
+	FlagPosition sql.NullString
+	Score        sql.NullInt64
+	Points       sql.NullInt64
+	Putts        sql.NullInt64
+	Gir          sql.NullBool
+	ScrambleSave sql.NullBool
+	Penalty      sql.NullBool
 }
 
 type HolePointsOfInterest struct {
@@ -71,47 +69,40 @@ type PlayerClub struct {
 	ID             int64
 	PlayerID       int64
 	ClubName       string
+	AddedDate      time.Time
+	RemovedDate    sql.NullTime
 	CarryAvg       sql.NullFloat64
 	CarryReliable  sql.NullFloat64
 	CarryMax       sql.NullFloat64
 	DispersionAvgM sql.NullFloat64
 	DispersionBias sql.NullString
 	SampleSize     int64
-	CalculatedAt   time.Time
+	CalculatedAt   sql.NullTime
 }
 
 type Round struct {
-	ID            int64
-	PlayerID      int64
-	CourseID      int64
-	PlayedAt      time.Time
-	Tees          string
-	RoundType     string
-	WindStrength  sql.NullString
-	WindDirection sql.NullString
-	Temperature   sql.NullString
-	TotalScore    sql.NullInt64
-	TotalPoints   sql.NullInt64
-	TotalPutts    sql.NullInt64
-	CreatedAt     time.Time
+	ID          int64
+	PlayerID    int64
+	CourseID    int64
+	PlayedAt    time.Time
+	Tees        string
+	RoundType   string
+	TotalScore  sql.NullInt64
+	TotalPoints sql.NullInt64
+	TotalPutts  sql.NullInt64
+	CreatedAt   time.Time
 }
 
 type Shot struct {
 	ID            int64
-	ClientUuid    sql.NullString
 	HoleID        int64
 	ShotNumber    int64
 	ShotType      string
 	Club          sql.NullString
-	FromLat       float64
-	FromLng       float64
-	ToLat         sql.NullFloat64
-	ToLng         sql.NullFloat64
-	CarryDistance sql.NullFloat64
 	Result        sql.NullString
+	Miss          sql.NullString
 	StrikeQuality sql.NullString
-	RecordedAt    time.Time
-	SyncedAt      sql.NullTime
+	Source        string
 }
 
 type Tee struct {

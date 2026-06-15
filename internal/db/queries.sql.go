@@ -8,57 +8,583 @@ package db
 import (
 	"context"
 	"database/sql"
+	"time"
 )
 
-const getClubDistances = `-- name: GetClubDistances :many
-SELECT p.Id, p.Name, pc.club_name, pc.carry_avg, pc.carry_reliable, pc.carry_max, pc.dispersion_avg_m, pc.dispersion_bias FROM players p INNER JOIN player_clubs pc ON p.id = pc.player_id WHERE p.Name = ?
+const createClub = `-- name: CreateClub :execresult
+INSERT INTO player_clubs (
+    player_id, club_name, added_date, removed_date,
+    carry_avg, carry_reliable, carry_max,
+    dispersion_avg_m, dispersion_bias, sample_size, calculated_at
+)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `
 
-type GetClubDistancesRow struct {
-	ID             int64
-	Name           string
+type CreateClubParams struct {
+	PlayerID       int64
 	ClubName       string
+	AddedDate      time.Time
+	RemovedDate    sql.NullTime
 	CarryAvg       sql.NullFloat64
 	CarryReliable  sql.NullFloat64
 	CarryMax       sql.NullFloat64
 	DispersionAvgM sql.NullFloat64
 	DispersionBias sql.NullString
+	SampleSize     int64
+	CalculatedAt   sql.NullTime
 }
 
-func (q *Queries) GetClubDistances(ctx context.Context, name string) ([]GetClubDistancesRow, error) {
-	rows, err := q.db.QueryContext(ctx, getClubDistances, name)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []GetClubDistancesRow
-	for rows.Next() {
-		var i GetClubDistancesRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.Name,
-			&i.ClubName,
-			&i.CarryAvg,
-			&i.CarryReliable,
-			&i.CarryMax,
-			&i.DispersionAvgM,
-			&i.DispersionBias,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
+func (q *Queries) CreateClub(ctx context.Context, arg CreateClubParams) (sql.Result, error) {
+	return q.db.ExecContext(ctx, createClub,
+		arg.PlayerID,
+		arg.ClubName,
+		arg.AddedDate,
+		arg.RemovedDate,
+		arg.CarryAvg,
+		arg.CarryReliable,
+		arg.CarryMax,
+		arg.DispersionAvgM,
+		arg.DispersionBias,
+		arg.SampleSize,
+		arg.CalculatedAt,
+	)
+}
+
+const createCommentary = `-- name: CreateCommentary :execresult
+INSERT INTO commentary (scope, scope_id, content, generated_at)
+VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+`
+
+type CreateCommentaryParams struct {
+	Scope   string
+	ScopeID int64
+	Content string
+}
+
+func (q *Queries) CreateCommentary(ctx context.Context, arg CreateCommentaryParams) (sql.Result, error) {
+	return q.db.ExecContext(ctx, createCommentary, arg.Scope, arg.ScopeID, arg.Content)
+}
+
+const createCourse = `-- name: CreateCourse :execresult
+INSERT INTO courses (name, golf_api_id, created_at)
+VALUES (?, ?, CURRENT_TIMESTAMP)
+`
+
+type CreateCourseParams struct {
+	Name      string
+	GolfApiID sql.NullString
+}
+
+func (q *Queries) CreateCourse(ctx context.Context, arg CreateCourseParams) (sql.Result, error) {
+	return q.db.ExecContext(ctx, createCourse, arg.Name, arg.GolfApiID)
+}
+
+const createCourseHole = `-- name: CreateCourseHole :execresult
+INSERT INTO course_holes (course_id, hole_number, green_centre_lat, green_centre_lng)
+VALUES (?, ?, ?, ?)
+`
+
+type CreateCourseHoleParams struct {
+	CourseID       int64
+	HoleNumber     int64
+	GreenCentreLat sql.NullFloat64
+	GreenCentreLng sql.NullFloat64
+}
+
+func (q *Queries) CreateCourseHole(ctx context.Context, arg CreateCourseHoleParams) (sql.Result, error) {
+	return q.db.ExecContext(ctx, createCourseHole,
+		arg.CourseID,
+		arg.HoleNumber,
+		arg.GreenCentreLat,
+		arg.GreenCentreLng,
+	)
+}
+
+const createHole = `-- name: CreateHole :execresult
+INSERT INTO holes (
+    round_id, course_hole_id, hole_number, flag_position,
+    score, points, putts, gir, scramble_save, penalty
+)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+`
+
+type CreateHoleParams struct {
+	RoundID      int64
+	CourseHoleID int64
+	HoleNumber   int64
+	FlagPosition sql.NullString
+	Score        sql.NullInt64
+	Points       sql.NullInt64
+	Putts        sql.NullInt64
+	Gir          sql.NullBool
+	ScrambleSave sql.NullBool
+	Penalty      sql.NullBool
+}
+
+func (q *Queries) CreateHole(ctx context.Context, arg CreateHoleParams) (sql.Result, error) {
+	return q.db.ExecContext(ctx, createHole,
+		arg.RoundID,
+		arg.CourseHoleID,
+		arg.HoleNumber,
+		arg.FlagPosition,
+		arg.Score,
+		arg.Points,
+		arg.Putts,
+		arg.Gir,
+		arg.ScrambleSave,
+		arg.Penalty,
+	)
+}
+
+const createPOI = `-- name: CreatePOI :execresult
+INSERT INTO hole_points_of_interest (
+    course_hole_id, specific_tee, poi_type, side,
+    reference_point, distance_start, distance_end, label
+)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+`
+
+type CreatePOIParams struct {
+	CourseHoleID   int64
+	SpecificTee    sql.NullString
+	PoiType        string
+	Side           sql.NullString
+	ReferencePoint sql.NullString
+	DistanceStart  sql.NullFloat64
+	DistanceEnd    sql.NullFloat64
+	Label          string
+}
+
+func (q *Queries) CreatePOI(ctx context.Context, arg CreatePOIParams) (sql.Result, error) {
+	return q.db.ExecContext(ctx, createPOI,
+		arg.CourseHoleID,
+		arg.SpecificTee,
+		arg.PoiType,
+		arg.Side,
+		arg.ReferencePoint,
+		arg.DistanceStart,
+		arg.DistanceEnd,
+		arg.Label,
+	)
+}
+
+const createPlayer = `-- name: CreatePlayer :execresult
+INSERT INTO players (name, handicap, updated_at)
+VALUES (?, ?, CURRENT_TIMESTAMP)
+`
+
+type CreatePlayerParams struct {
+	Name     string
+	Handicap sql.NullFloat64
+}
+
+func (q *Queries) CreatePlayer(ctx context.Context, arg CreatePlayerParams) (sql.Result, error) {
+	return q.db.ExecContext(ctx, createPlayer, arg.Name, arg.Handicap)
+}
+
+const createRound = `-- name: CreateRound :execresult
+INSERT INTO rounds (
+    player_id, course_id, played_at, tees, round_type,
+    total_score, total_points, total_putts, created_at
+)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+`
+
+type CreateRoundParams struct {
+	PlayerID    int64
+	CourseID    int64
+	PlayedAt    time.Time
+	Tees        string
+	RoundType   string
+	TotalScore  sql.NullInt64
+	TotalPoints sql.NullInt64
+	TotalPutts  sql.NullInt64
+}
+
+func (q *Queries) CreateRound(ctx context.Context, arg CreateRoundParams) (sql.Result, error) {
+	return q.db.ExecContext(ctx, createRound,
+		arg.PlayerID,
+		arg.CourseID,
+		arg.PlayedAt,
+		arg.Tees,
+		arg.RoundType,
+		arg.TotalScore,
+		arg.TotalPoints,
+		arg.TotalPutts,
+	)
+}
+
+const createShot = `-- name: CreateShot :execresult
+INSERT INTO shots (
+    hole_id, shot_number, shot_type, club,
+    result, miss, strike_quality, source
+)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+`
+
+type CreateShotParams struct {
+	HoleID        int64
+	ShotNumber    int64
+	ShotType      string
+	Club          sql.NullString
+	Result        sql.NullString
+	Miss          sql.NullString
+	StrikeQuality sql.NullString
+	Source        string
+}
+
+func (q *Queries) CreateShot(ctx context.Context, arg CreateShotParams) (sql.Result, error) {
+	return q.db.ExecContext(ctx, createShot,
+		arg.HoleID,
+		arg.ShotNumber,
+		arg.ShotType,
+		arg.Club,
+		arg.Result,
+		arg.Miss,
+		arg.StrikeQuality,
+		arg.Source,
+	)
+}
+
+const createTee = `-- name: CreateTee :execresult
+INSERT INTO tees (course_id, name, slope_rating, course_rating)
+VALUES (?, ?, ?, ?)
+`
+
+type CreateTeeParams struct {
+	CourseID     int64
+	Name         string
+	SlopeRating  sql.NullInt64
+	CourseRating sql.NullFloat64
+}
+
+func (q *Queries) CreateTee(ctx context.Context, arg CreateTeeParams) (sql.Result, error) {
+	return q.db.ExecContext(ctx, createTee,
+		arg.CourseID,
+		arg.Name,
+		arg.SlopeRating,
+		arg.CourseRating,
+	)
+}
+
+const createTeeHole = `-- name: CreateTeeHole :execresult
+INSERT INTO tee_holes (
+    course_hole_id, tee_id, par, stroke_index,
+    distance, tee_centre_lat, tee_centre_lng
+)
+VALUES (?, ?, ?, ?, ?, ?, ?)
+`
+
+type CreateTeeHoleParams struct {
+	CourseHoleID int64
+	TeeID        int64
+	Par          int64
+	StrokeIndex  sql.NullInt64
+	Distance     int64
+	TeeCentreLat sql.NullFloat64
+	TeeCentreLng sql.NullFloat64
+}
+
+func (q *Queries) CreateTeeHole(ctx context.Context, arg CreateTeeHoleParams) (sql.Result, error) {
+	return q.db.ExecContext(ctx, createTeeHole,
+		arg.CourseHoleID,
+		arg.TeeID,
+		arg.Par,
+		arg.StrokeIndex,
+		arg.Distance,
+		arg.TeeCentreLat,
+		arg.TeeCentreLng,
+	)
+}
+
+const deleteClub = `-- name: DeleteClub :exec
+DELETE FROM player_clubs
+WHERE id = ?
+`
+
+func (q *Queries) DeleteClub(ctx context.Context, id int64) error {
+	_, err := q.db.ExecContext(ctx, deleteClub, id)
+	return err
+}
+
+const deleteCommentary = `-- name: DeleteCommentary :exec
+DELETE FROM commentary
+WHERE id = ?
+`
+
+func (q *Queries) DeleteCommentary(ctx context.Context, id int64) error {
+	_, err := q.db.ExecContext(ctx, deleteCommentary, id)
+	return err
+}
+
+const deleteCommentaryByScope = `-- name: DeleteCommentaryByScope :exec
+DELETE FROM commentary
+WHERE scope    = ?
+  AND scope_id = ?
+`
+
+type DeleteCommentaryByScopeParams struct {
+	Scope   string
+	ScopeID int64
+}
+
+func (q *Queries) DeleteCommentaryByScope(ctx context.Context, arg DeleteCommentaryByScopeParams) error {
+	_, err := q.db.ExecContext(ctx, deleteCommentaryByScope, arg.Scope, arg.ScopeID)
+	return err
+}
+
+const deleteCourse = `-- name: DeleteCourse :exec
+DELETE FROM courses
+WHERE id = ?
+`
+
+func (q *Queries) DeleteCourse(ctx context.Context, id int64) error {
+	_, err := q.db.ExecContext(ctx, deleteCourse, id)
+	return err
+}
+
+const deleteCourseHole = `-- name: DeleteCourseHole :exec
+DELETE FROM course_holes
+WHERE id = ?
+`
+
+func (q *Queries) DeleteCourseHole(ctx context.Context, id int64) error {
+	_, err := q.db.ExecContext(ctx, deleteCourseHole, id)
+	return err
+}
+
+const deleteHole = `-- name: DeleteHole :exec
+DELETE FROM holes
+WHERE id = ?
+`
+
+func (q *Queries) DeleteHole(ctx context.Context, id int64) error {
+	_, err := q.db.ExecContext(ctx, deleteHole, id)
+	return err
+}
+
+const deletePOI = `-- name: DeletePOI :exec
+DELETE FROM hole_points_of_interest
+WHERE id = ?
+`
+
+func (q *Queries) DeletePOI(ctx context.Context, id int64) error {
+	_, err := q.db.ExecContext(ctx, deletePOI, id)
+	return err
+}
+
+const deletePOIsByHole = `-- name: DeletePOIsByHole :exec
+DELETE FROM hole_points_of_interest
+WHERE course_hole_id = ?
+`
+
+func (q *Queries) DeletePOIsByHole(ctx context.Context, courseHoleID int64) error {
+	_, err := q.db.ExecContext(ctx, deletePOIsByHole, courseHoleID)
+	return err
+}
+
+const deletePlayer = `-- name: DeletePlayer :exec
+DELETE FROM players
+WHERE id = ?
+`
+
+func (q *Queries) DeletePlayer(ctx context.Context, id int64) error {
+	_, err := q.db.ExecContext(ctx, deletePlayer, id)
+	return err
+}
+
+const deleteRound = `-- name: DeleteRound :exec
+DELETE FROM rounds
+WHERE id = ?
+`
+
+func (q *Queries) DeleteRound(ctx context.Context, id int64) error {
+	_, err := q.db.ExecContext(ctx, deleteRound, id)
+	return err
+}
+
+const deleteShot = `-- name: DeleteShot :exec
+DELETE FROM shots
+WHERE id = ?
+`
+
+func (q *Queries) DeleteShot(ctx context.Context, id int64) error {
+	_, err := q.db.ExecContext(ctx, deleteShot, id)
+	return err
+}
+
+const deleteShotsByHole = `-- name: DeleteShotsByHole :exec
+DELETE FROM shots
+WHERE hole_id = ?
+`
+
+func (q *Queries) DeleteShotsByHole(ctx context.Context, holeID int64) error {
+	_, err := q.db.ExecContext(ctx, deleteShotsByHole, holeID)
+	return err
+}
+
+const deleteTee = `-- name: DeleteTee :exec
+DELETE FROM tees
+WHERE id = ?
+`
+
+func (q *Queries) DeleteTee(ctx context.Context, id int64) error {
+	_, err := q.db.ExecContext(ctx, deleteTee, id)
+	return err
+}
+
+const deleteTeeHole = `-- name: DeleteTeeHole :exec
+DELETE FROM tee_holes
+WHERE id = ?
+`
+
+func (q *Queries) DeleteTeeHole(ctx context.Context, id int64) error {
+	_, err := q.db.ExecContext(ctx, deleteTeeHole, id)
+	return err
+}
+
+const getClubByID = `-- name: GetClubByID :one
+SELECT id, player_id, club_name, added_date, removed_date,
+       carry_avg, carry_reliable, carry_max,
+       dispersion_avg_m, dispersion_bias, sample_size, calculated_at
+FROM player_clubs
+WHERE id = ?
+`
+
+func (q *Queries) GetClubByID(ctx context.Context, id int64) (PlayerClub, error) {
+	row := q.db.QueryRowContext(ctx, getClubByID, id)
+	var i PlayerClub
+	err := row.Scan(
+		&i.ID,
+		&i.PlayerID,
+		&i.ClubName,
+		&i.AddedDate,
+		&i.RemovedDate,
+		&i.CarryAvg,
+		&i.CarryReliable,
+		&i.CarryMax,
+		&i.DispersionAvgM,
+		&i.DispersionBias,
+		&i.SampleSize,
+		&i.CalculatedAt,
+	)
+	return i, err
+}
+
+const getClubByPlayerAndName = `-- name: GetClubByPlayerAndName :one
+SELECT id, player_id, club_name, added_date, removed_date,
+       carry_avg, carry_reliable, carry_max,
+       dispersion_avg_m, dispersion_bias, sample_size, calculated_at
+FROM player_clubs
+WHERE player_id    = ?
+  AND club_name    = ?
+  AND removed_date IS NULL
+`
+
+type GetClubByPlayerAndNameParams struct {
+	PlayerID int64
+	ClubName string
+}
+
+// Returns the current (active) club record for a given player and club name
+func (q *Queries) GetClubByPlayerAndName(ctx context.Context, arg GetClubByPlayerAndNameParams) (PlayerClub, error) {
+	row := q.db.QueryRowContext(ctx, getClubByPlayerAndName, arg.PlayerID, arg.ClubName)
+	var i PlayerClub
+	err := row.Scan(
+		&i.ID,
+		&i.PlayerID,
+		&i.ClubName,
+		&i.AddedDate,
+		&i.RemovedDate,
+		&i.CarryAvg,
+		&i.CarryReliable,
+		&i.CarryMax,
+		&i.DispersionAvgM,
+		&i.DispersionBias,
+		&i.SampleSize,
+		&i.CalculatedAt,
+	)
+	return i, err
+}
+
+const getClubByPlayerNameAndDate = `-- name: GetClubByPlayerNameAndDate :one
+SELECT id, player_id, club_name, added_date, removed_date,
+       carry_avg, carry_reliable, carry_max,
+       dispersion_avg_m, dispersion_bias, sample_size, calculated_at
+FROM player_clubs
+WHERE player_id  = ?
+  AND club_name  = ?
+  AND added_date = ?
+`
+
+type GetClubByPlayerNameAndDateParams struct {
+	PlayerID  int64
+	ClubName  string
+	AddedDate time.Time
+}
+
+// Returns club as it existed on a specific date (for historical analysis)
+func (q *Queries) GetClubByPlayerNameAndDate(ctx context.Context, arg GetClubByPlayerNameAndDateParams) (PlayerClub, error) {
+	row := q.db.QueryRowContext(ctx, getClubByPlayerNameAndDate, arg.PlayerID, arg.ClubName, arg.AddedDate)
+	var i PlayerClub
+	err := row.Scan(
+		&i.ID,
+		&i.PlayerID,
+		&i.ClubName,
+		&i.AddedDate,
+		&i.RemovedDate,
+		&i.CarryAvg,
+		&i.CarryReliable,
+		&i.CarryMax,
+		&i.DispersionAvgM,
+		&i.DispersionBias,
+		&i.SampleSize,
+		&i.CalculatedAt,
+	)
+	return i, err
+}
+
+const getCommentaryByID = `-- name: GetCommentaryByID :one
+SELECT id, scope, scope_id, content, generated_at
+FROM commentary
+WHERE id = ?
+`
+
+func (q *Queries) GetCommentaryByID(ctx context.Context, id int64) (Commentary, error) {
+	row := q.db.QueryRowContext(ctx, getCommentaryByID, id)
+	var i Commentary
+	err := row.Scan(
+		&i.ID,
+		&i.Scope,
+		&i.ScopeID,
+		&i.Content,
+		&i.GeneratedAt,
+	)
+	return i, err
+}
+
+const getCourseByID = `-- name: GetCourseByID :one
+SELECT id, name, golf_api_id, created_at
+FROM courses
+WHERE id = ?
+`
+
+func (q *Queries) GetCourseByID(ctx context.Context, id int64) (Course, error) {
+	row := q.db.QueryRowContext(ctx, getCourseByID, id)
+	var i Course
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.GolfApiID,
+		&i.CreatedAt,
+	)
+	return i, err
 }
 
 const getCourseByName = `-- name: GetCourseByName :one
-SELECT id, name, golf_api_id, created_at FROM courses WHERE name = ?
+SELECT id, name, golf_api_id, created_at
+FROM courses
+WHERE name = ?
 `
 
 func (q *Queries) GetCourseByName(ctx context.Context, name string) (Course, error) {
@@ -73,12 +599,168 @@ func (q *Queries) GetCourseByName(ctx context.Context, name string) (Course, err
 	return i, err
 }
 
-const getPlayerById = `-- name: GetPlayerById :one
-SELECT id, name, handicap, updated_at from players WHERE id = ?
+const getCourseHoleByCourseAndNumber = `-- name: GetCourseHoleByCourseAndNumber :one
+SELECT id, course_id, hole_number, green_centre_lat, green_centre_lng
+FROM course_holes
+WHERE course_id   = ?
+  AND hole_number = ?
 `
 
-func (q *Queries) GetPlayerById(ctx context.Context, id int64) (Player, error) {
-	row := q.db.QueryRowContext(ctx, getPlayerById, id)
+type GetCourseHoleByCourseAndNumberParams struct {
+	CourseID   int64
+	HoleNumber int64
+}
+
+func (q *Queries) GetCourseHoleByCourseAndNumber(ctx context.Context, arg GetCourseHoleByCourseAndNumberParams) (CourseHole, error) {
+	row := q.db.QueryRowContext(ctx, getCourseHoleByCourseAndNumber, arg.CourseID, arg.HoleNumber)
+	var i CourseHole
+	err := row.Scan(
+		&i.ID,
+		&i.CourseID,
+		&i.HoleNumber,
+		&i.GreenCentreLat,
+		&i.GreenCentreLng,
+	)
+	return i, err
+}
+
+const getCourseHoleByID = `-- name: GetCourseHoleByID :one
+SELECT id, course_id, hole_number, green_centre_lat, green_centre_lng
+FROM course_holes
+WHERE id = ?
+`
+
+func (q *Queries) GetCourseHoleByID(ctx context.Context, id int64) (CourseHole, error) {
+	row := q.db.QueryRowContext(ctx, getCourseHoleByID, id)
+	var i CourseHole
+	err := row.Scan(
+		&i.ID,
+		&i.CourseID,
+		&i.HoleNumber,
+		&i.GreenCentreLat,
+		&i.GreenCentreLng,
+	)
+	return i, err
+}
+
+const getHoleByID = `-- name: GetHoleByID :one
+SELECT id, round_id, course_hole_id, hole_number, flag_position,
+       score, points, putts, gir, scramble_save, penalty
+FROM holes
+WHERE id = ?
+`
+
+func (q *Queries) GetHoleByID(ctx context.Context, id int64) (Hole, error) {
+	row := q.db.QueryRowContext(ctx, getHoleByID, id)
+	var i Hole
+	err := row.Scan(
+		&i.ID,
+		&i.RoundID,
+		&i.CourseHoleID,
+		&i.HoleNumber,
+		&i.FlagPosition,
+		&i.Score,
+		&i.Points,
+		&i.Putts,
+		&i.Gir,
+		&i.ScrambleSave,
+		&i.Penalty,
+	)
+	return i, err
+}
+
+const getHoleByRoundAndNumber = `-- name: GetHoleByRoundAndNumber :one
+SELECT id, round_id, course_hole_id, hole_number, flag_position,
+       score, points, putts, gir, scramble_save, penalty
+FROM holes
+WHERE round_id    = ?
+  AND hole_number = ?
+`
+
+type GetHoleByRoundAndNumberParams struct {
+	RoundID    int64
+	HoleNumber int64
+}
+
+func (q *Queries) GetHoleByRoundAndNumber(ctx context.Context, arg GetHoleByRoundAndNumberParams) (Hole, error) {
+	row := q.db.QueryRowContext(ctx, getHoleByRoundAndNumber, arg.RoundID, arg.HoleNumber)
+	var i Hole
+	err := row.Scan(
+		&i.ID,
+		&i.RoundID,
+		&i.CourseHoleID,
+		&i.HoleNumber,
+		&i.FlagPosition,
+		&i.Score,
+		&i.Points,
+		&i.Putts,
+		&i.Gir,
+		&i.ScrambleSave,
+		&i.Penalty,
+	)
+	return i, err
+}
+
+const getLatestCommentaryByScope = `-- name: GetLatestCommentaryByScope :one
+SELECT id, scope, scope_id, content, generated_at
+FROM commentary
+WHERE scope    = ?
+  AND scope_id = ?
+ORDER BY generated_at DESC
+LIMIT 1
+`
+
+type GetLatestCommentaryByScopeParams struct {
+	Scope   string
+	ScopeID int64
+}
+
+// Returns the most recent commentary for a hole or round
+func (q *Queries) GetLatestCommentaryByScope(ctx context.Context, arg GetLatestCommentaryByScopeParams) (Commentary, error) {
+	row := q.db.QueryRowContext(ctx, getLatestCommentaryByScope, arg.Scope, arg.ScopeID)
+	var i Commentary
+	err := row.Scan(
+		&i.ID,
+		&i.Scope,
+		&i.ScopeID,
+		&i.Content,
+		&i.GeneratedAt,
+	)
+	return i, err
+}
+
+const getPOIByID = `-- name: GetPOIByID :one
+SELECT id, course_hole_id, specific_tee, poi_type, side,
+       reference_point, distance_start, distance_end, label
+FROM hole_points_of_interest
+WHERE id = ?
+`
+
+func (q *Queries) GetPOIByID(ctx context.Context, id int64) (HolePointsOfInterest, error) {
+	row := q.db.QueryRowContext(ctx, getPOIByID, id)
+	var i HolePointsOfInterest
+	err := row.Scan(
+		&i.ID,
+		&i.CourseHoleID,
+		&i.SpecificTee,
+		&i.PoiType,
+		&i.Side,
+		&i.ReferencePoint,
+		&i.DistanceStart,
+		&i.DistanceEnd,
+		&i.Label,
+	)
+	return i, err
+}
+
+const getPlayerByID = `-- name: GetPlayerByID :one
+SELECT id, name, handicap, updated_at
+FROM players
+WHERE id = ?
+`
+
+func (q *Queries) GetPlayerByID(ctx context.Context, id int64) (Player, error) {
+	row := q.db.QueryRowContext(ctx, getPlayerByID, id)
 	var i Player
 	err := row.Scan(
 		&i.ID,
@@ -90,9 +772,9 @@ func (q *Queries) GetPlayerById(ctx context.Context, id int64) (Player, error) {
 }
 
 const getPlayerByName = `-- name: GetPlayerByName :one
-SELECT id, name, handicap, updated_at 
-from players p 
-WHERE p.name=?
+SELECT id, name, handicap, updated_at
+FROM players
+WHERE name = ?
 `
 
 func (q *Queries) GetPlayerByName(ctx context.Context, name string) (Player, error) {
@@ -107,28 +789,231 @@ func (q *Queries) GetPlayerByName(ctx context.Context, name string) (Player, err
 	return i, err
 }
 
-const getTeesByCourse = `-- name: GetTeesByCourse :many
-SELECT ct.id, ct.name, ct.slope_rating, ct.course_rating FROM tees ct WHERE course_id=?
+const getRoundByID = `-- name: GetRoundByID :one
+SELECT id, player_id, course_id, played_at, tees, round_type,
+       total_score, total_points, total_putts, created_at
+FROM rounds
+WHERE id = ?
 `
 
-type GetTeesByCourseRow struct {
-	ID           int64
-	Name         string
-	SlopeRating  sql.NullInt64
-	CourseRating sql.NullFloat64
+func (q *Queries) GetRoundByID(ctx context.Context, id int64) (Round, error) {
+	row := q.db.QueryRowContext(ctx, getRoundByID, id)
+	var i Round
+	err := row.Scan(
+		&i.ID,
+		&i.PlayerID,
+		&i.CourseID,
+		&i.PlayedAt,
+		&i.Tees,
+		&i.RoundType,
+		&i.TotalScore,
+		&i.TotalPoints,
+		&i.TotalPutts,
+		&i.CreatedAt,
+	)
+	return i, err
 }
 
-func (q *Queries) GetTeesByCourse(ctx context.Context, courseID int64) ([]GetTeesByCourseRow, error) {
+const getRoundByPlayerAndDate = `-- name: GetRoundByPlayerAndDate :one
+SELECT id, player_id, course_id, played_at, tees, round_type,
+       total_score, total_points, total_putts, created_at
+FROM rounds
+WHERE player_id = ?
+  AND played_at = ?
+`
+
+type GetRoundByPlayerAndDateParams struct {
+	PlayerID int64
+	PlayedAt time.Time
+}
+
+func (q *Queries) GetRoundByPlayerAndDate(ctx context.Context, arg GetRoundByPlayerAndDateParams) (Round, error) {
+	row := q.db.QueryRowContext(ctx, getRoundByPlayerAndDate, arg.PlayerID, arg.PlayedAt)
+	var i Round
+	err := row.Scan(
+		&i.ID,
+		&i.PlayerID,
+		&i.CourseID,
+		&i.PlayedAt,
+		&i.Tees,
+		&i.RoundType,
+		&i.TotalScore,
+		&i.TotalPoints,
+		&i.TotalPutts,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const getShotByHoleAndNumber = `-- name: GetShotByHoleAndNumber :one
+SELECT id, hole_id, shot_number, shot_type, club,
+       result, miss, strike_quality, source
+FROM shots
+WHERE hole_id    = ?
+  AND shot_number = ?
+`
+
+type GetShotByHoleAndNumberParams struct {
+	HoleID     int64
+	ShotNumber int64
+}
+
+func (q *Queries) GetShotByHoleAndNumber(ctx context.Context, arg GetShotByHoleAndNumberParams) (Shot, error) {
+	row := q.db.QueryRowContext(ctx, getShotByHoleAndNumber, arg.HoleID, arg.ShotNumber)
+	var i Shot
+	err := row.Scan(
+		&i.ID,
+		&i.HoleID,
+		&i.ShotNumber,
+		&i.ShotType,
+		&i.Club,
+		&i.Result,
+		&i.Miss,
+		&i.StrikeQuality,
+		&i.Source,
+	)
+	return i, err
+}
+
+const getShotByID = `-- name: GetShotByID :one
+SELECT id, hole_id, shot_number, shot_type, club,
+       result, miss, strike_quality, source
+FROM shots
+WHERE id = ?
+`
+
+func (q *Queries) GetShotByID(ctx context.Context, id int64) (Shot, error) {
+	row := q.db.QueryRowContext(ctx, getShotByID, id)
+	var i Shot
+	err := row.Scan(
+		&i.ID,
+		&i.HoleID,
+		&i.ShotNumber,
+		&i.ShotType,
+		&i.Club,
+		&i.Result,
+		&i.Miss,
+		&i.StrikeQuality,
+		&i.Source,
+	)
+	return i, err
+}
+
+const getTeeByCourseAndName = `-- name: GetTeeByCourseAndName :one
+SELECT id, course_id, name, slope_rating, course_rating
+FROM tees
+WHERE course_id = ?
+  AND name = ?
+`
+
+type GetTeeByCourseAndNameParams struct {
+	CourseID int64
+	Name     string
+}
+
+func (q *Queries) GetTeeByCourseAndName(ctx context.Context, arg GetTeeByCourseAndNameParams) (Tee, error) {
+	row := q.db.QueryRowContext(ctx, getTeeByCourseAndName, arg.CourseID, arg.Name)
+	var i Tee
+	err := row.Scan(
+		&i.ID,
+		&i.CourseID,
+		&i.Name,
+		&i.SlopeRating,
+		&i.CourseRating,
+	)
+	return i, err
+}
+
+const getTeeByID = `-- name: GetTeeByID :one
+SELECT id, course_id, name, slope_rating, course_rating
+FROM tees
+WHERE id = ?
+`
+
+func (q *Queries) GetTeeByID(ctx context.Context, id int64) (Tee, error) {
+	row := q.db.QueryRowContext(ctx, getTeeByID, id)
+	var i Tee
+	err := row.Scan(
+		&i.ID,
+		&i.CourseID,
+		&i.Name,
+		&i.SlopeRating,
+		&i.CourseRating,
+	)
+	return i, err
+}
+
+const getTeeHoleByHoleAndTee = `-- name: GetTeeHoleByHoleAndTee :one
+SELECT id, course_hole_id, tee_id, par, stroke_index,
+       distance, tee_centre_lat, tee_centre_lng
+FROM tee_holes
+WHERE course_hole_id = ?
+  AND tee_id         = ?
+`
+
+type GetTeeHoleByHoleAndTeeParams struct {
+	CourseHoleID int64
+	TeeID        int64
+}
+
+func (q *Queries) GetTeeHoleByHoleAndTee(ctx context.Context, arg GetTeeHoleByHoleAndTeeParams) (TeeHole, error) {
+	row := q.db.QueryRowContext(ctx, getTeeHoleByHoleAndTee, arg.CourseHoleID, arg.TeeID)
+	var i TeeHole
+	err := row.Scan(
+		&i.ID,
+		&i.CourseHoleID,
+		&i.TeeID,
+		&i.Par,
+		&i.StrokeIndex,
+		&i.Distance,
+		&i.TeeCentreLat,
+		&i.TeeCentreLng,
+	)
+	return i, err
+}
+
+const getTeeHoleByID = `-- name: GetTeeHoleByID :one
+SELECT id, course_hole_id, tee_id, par, stroke_index,
+       distance, tee_centre_lat, tee_centre_lng
+FROM tee_holes
+WHERE id = ?
+`
+
+func (q *Queries) GetTeeHoleByID(ctx context.Context, id int64) (TeeHole, error) {
+	row := q.db.QueryRowContext(ctx, getTeeHoleByID, id)
+	var i TeeHole
+	err := row.Scan(
+		&i.ID,
+		&i.CourseHoleID,
+		&i.TeeID,
+		&i.Par,
+		&i.StrokeIndex,
+		&i.Distance,
+		&i.TeeCentreLat,
+		&i.TeeCentreLng,
+	)
+	return i, err
+}
+
+const getTeesByCourse = `-- name: GetTeesByCourse :many
+SELECT id, course_id, name, slope_rating, course_rating
+FROM tees
+WHERE course_id = ?
+ORDER BY name
+`
+
+func (q *Queries) GetTeesByCourse(ctx context.Context, courseID int64) ([]Tee, error) {
 	rows, err := q.db.QueryContext(ctx, getTeesByCourse, courseID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GetTeesByCourseRow
+	var items []Tee
 	for rows.Next() {
-		var i GetTeesByCourseRow
+		var i Tee
 		if err := rows.Scan(
 			&i.ID,
+			&i.CourseID,
 			&i.Name,
 			&i.SlopeRating,
 			&i.CourseRating,
@@ -146,11 +1031,402 @@ func (q *Queries) GetTeesByCourse(ctx context.Context, courseID int64) ([]GetTee
 	return items, nil
 }
 
-const listPlayers = `-- name: ListPlayers :many
-SELECT id, name, handicap, updated_at 
-FROM players
+const listActiveClubsByPlayer = `-- name: ListActiveClubsByPlayer :many
+SELECT id, player_id, club_name, added_date, removed_date,
+       carry_avg, carry_reliable, carry_max,
+       dispersion_avg_m, dispersion_bias, sample_size, calculated_at
+FROM player_clubs
+WHERE player_id    = ?
+  AND removed_date IS NULL
+ORDER BY club_name
 `
 
+func (q *Queries) ListActiveClubsByPlayer(ctx context.Context, playerID int64) ([]PlayerClub, error) {
+	rows, err := q.db.QueryContext(ctx, listActiveClubsByPlayer, playerID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []PlayerClub
+	for rows.Next() {
+		var i PlayerClub
+		if err := rows.Scan(
+			&i.ID,
+			&i.PlayerID,
+			&i.ClubName,
+			&i.AddedDate,
+			&i.RemovedDate,
+			&i.CarryAvg,
+			&i.CarryReliable,
+			&i.CarryMax,
+			&i.DispersionAvgM,
+			&i.DispersionBias,
+			&i.SampleSize,
+			&i.CalculatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listClubsByPlayer = `-- name: ListClubsByPlayer :many
+
+SELECT id, player_id, club_name, added_date, removed_date,
+       carry_avg, carry_reliable, carry_max,
+       dispersion_avg_m, dispersion_bias, sample_size, calculated_at
+FROM player_clubs
+WHERE player_id = ?
+ORDER BY added_date DESC, club_name
+`
+
+// ============================================================
+// PLAYER CLUBS
+// Unique constraint: (player_id, club_name, added_date)
+// Active clubs: removed_date IS NULL
+// ============================================================
+func (q *Queries) ListClubsByPlayer(ctx context.Context, playerID int64) ([]PlayerClub, error) {
+	rows, err := q.db.QueryContext(ctx, listClubsByPlayer, playerID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []PlayerClub
+	for rows.Next() {
+		var i PlayerClub
+		if err := rows.Scan(
+			&i.ID,
+			&i.PlayerID,
+			&i.ClubName,
+			&i.AddedDate,
+			&i.RemovedDate,
+			&i.CarryAvg,
+			&i.CarryReliable,
+			&i.CarryMax,
+			&i.DispersionAvgM,
+			&i.DispersionBias,
+			&i.SampleSize,
+			&i.CalculatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listCommentaryByScope = `-- name: ListCommentaryByScope :many
+
+SELECT id, scope, scope_id, content, generated_at
+FROM commentary
+WHERE scope    = ?
+  AND scope_id = ?
+ORDER BY generated_at DESC
+`
+
+type ListCommentaryByScopeParams struct {
+	Scope   string
+	ScopeID int64
+}
+
+// ============================================================
+// COMMENTARY
+// No unique constraint - scope + scope_id can have multiple entries
+// (multiple commentary passes on the same hole/round are valid)
+// ============================================================
+func (q *Queries) ListCommentaryByScope(ctx context.Context, arg ListCommentaryByScopeParams) ([]Commentary, error) {
+	rows, err := q.db.QueryContext(ctx, listCommentaryByScope, arg.Scope, arg.ScopeID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Commentary
+	for rows.Next() {
+		var i Commentary
+		if err := rows.Scan(
+			&i.ID,
+			&i.Scope,
+			&i.ScopeID,
+			&i.Content,
+			&i.GeneratedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listCourseHoles = `-- name: ListCourseHoles :many
+
+SELECT id, course_id, hole_number, green_centre_lat, green_centre_lng
+FROM course_holes
+WHERE course_id = ?
+ORDER BY hole_number
+`
+
+// ============================================================
+// COURSE HOLES
+// Unique constraint: (course_id, hole_number)
+// ============================================================
+func (q *Queries) ListCourseHoles(ctx context.Context, courseID int64) ([]CourseHole, error) {
+	rows, err := q.db.QueryContext(ctx, listCourseHoles, courseID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []CourseHole
+	for rows.Next() {
+		var i CourseHole
+		if err := rows.Scan(
+			&i.ID,
+			&i.CourseID,
+			&i.HoleNumber,
+			&i.GreenCentreLat,
+			&i.GreenCentreLng,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listCourses = `-- name: ListCourses :many
+
+
+
+SELECT id, name, golf_api_id, created_at
+FROM courses
+ORDER BY name
+`
+
+// ============================================================
+// Golf Caddie - sqlc Query Definitions
+// ============================================================
+//
+// One file per logical group, matching the schema table order.
+// All queries use the sqlc annotation format:
+//
+//	-- name: QueryName :return_type
+//
+// Return types:
+//
+//	:one        -> single row, error if not found
+//	:many       -> slice of rows
+//	:exec       -> no rows returned (INSERT/UPDATE/DELETE)
+//	:execresult -> no rows, but returns sql.Result (for LastInsertId)
+//
+// ============================================================
+// ============================================================
+// COURSES
+// Unique constraints: name, golf_api_id
+// ============================================================
+func (q *Queries) ListCourses(ctx context.Context) ([]Course, error) {
+	rows, err := q.db.QueryContext(ctx, listCourses)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Course
+	for rows.Next() {
+		var i Course
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.GolfApiID,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listHolesByRound = `-- name: ListHolesByRound :many
+
+SELECT id, round_id, course_hole_id, hole_number, flag_position,
+       score, points, putts, gir, scramble_save, penalty
+FROM holes
+WHERE round_id = ?
+ORDER BY hole_number
+`
+
+// ============================================================
+// HOLES
+// Unique constraint: (round_id, hole_number)
+// ============================================================
+func (q *Queries) ListHolesByRound(ctx context.Context, roundID int64) ([]Hole, error) {
+	rows, err := q.db.QueryContext(ctx, listHolesByRound, roundID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Hole
+	for rows.Next() {
+		var i Hole
+		if err := rows.Scan(
+			&i.ID,
+			&i.RoundID,
+			&i.CourseHoleID,
+			&i.HoleNumber,
+			&i.FlagPosition,
+			&i.Score,
+			&i.Points,
+			&i.Putts,
+			&i.Gir,
+			&i.ScrambleSave,
+			&i.Penalty,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listPOIsByHole = `-- name: ListPOIsByHole :many
+
+SELECT id, course_hole_id, specific_tee, poi_type, side,
+       reference_point, distance_start, distance_end, label
+FROM hole_points_of_interest
+WHERE course_hole_id = ?
+ORDER BY poi_type, distance_start
+`
+
+// ============================================================
+// HOLE POINTS OF INTEREST
+// No single-column unique constraint - queried by hole
+// ============================================================
+func (q *Queries) ListPOIsByHole(ctx context.Context, courseHoleID int64) ([]HolePointsOfInterest, error) {
+	rows, err := q.db.QueryContext(ctx, listPOIsByHole, courseHoleID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []HolePointsOfInterest
+	for rows.Next() {
+		var i HolePointsOfInterest
+		if err := rows.Scan(
+			&i.ID,
+			&i.CourseHoleID,
+			&i.SpecificTee,
+			&i.PoiType,
+			&i.Side,
+			&i.ReferencePoint,
+			&i.DistanceStart,
+			&i.DistanceEnd,
+			&i.Label,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listPOIsByHoleAndTee = `-- name: ListPOIsByHoleAndTee :many
+SELECT id, course_hole_id, specific_tee, poi_type, side,
+       reference_point, distance_start, distance_end, label
+FROM hole_points_of_interest
+WHERE course_hole_id = ?
+  AND (specific_tee = ? OR specific_tee IS NULL)
+ORDER BY poi_type, distance_start
+`
+
+type ListPOIsByHoleAndTeeParams struct {
+	CourseHoleID int64
+	SpecificTee  sql.NullString
+}
+
+func (q *Queries) ListPOIsByHoleAndTee(ctx context.Context, arg ListPOIsByHoleAndTeeParams) ([]HolePointsOfInterest, error) {
+	rows, err := q.db.QueryContext(ctx, listPOIsByHoleAndTee, arg.CourseHoleID, arg.SpecificTee)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []HolePointsOfInterest
+	for rows.Next() {
+		var i HolePointsOfInterest
+		if err := rows.Scan(
+			&i.ID,
+			&i.CourseHoleID,
+			&i.SpecificTee,
+			&i.PoiType,
+			&i.Side,
+			&i.ReferencePoint,
+			&i.DistanceStart,
+			&i.DistanceEnd,
+			&i.Label,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listPlayers = `-- name: ListPlayers :many
+
+SELECT id, name, handicap, updated_at
+FROM players
+ORDER BY name
+`
+
+// ============================================================
+// PLAYERS
+// Unique constraint: name
+// ============================================================
 func (q *Queries) ListPlayers(ctx context.Context) ([]Player, error) {
 	rows, err := q.db.QueryContext(ctx, listPlayers)
 	if err != nil {
@@ -177,4 +1453,558 @@ func (q *Queries) ListPlayers(ctx context.Context) ([]Player, error) {
 		return nil, err
 	}
 	return items, nil
+}
+
+const listRoundsByPlayer = `-- name: ListRoundsByPlayer :many
+
+SELECT id, player_id, course_id, played_at, tees, round_type,
+       total_score, total_points, total_putts, created_at
+FROM rounds
+WHERE player_id = ?
+ORDER BY played_at DESC
+`
+
+// ============================================================
+// ROUNDS
+// No single-column unique constraint
+// Primary access patterns: by player, by player+date
+// ============================================================
+func (q *Queries) ListRoundsByPlayer(ctx context.Context, playerID int64) ([]Round, error) {
+	rows, err := q.db.QueryContext(ctx, listRoundsByPlayer, playerID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Round
+	for rows.Next() {
+		var i Round
+		if err := rows.Scan(
+			&i.ID,
+			&i.PlayerID,
+			&i.CourseID,
+			&i.PlayedAt,
+			&i.Tees,
+			&i.RoundType,
+			&i.TotalScore,
+			&i.TotalPoints,
+			&i.TotalPutts,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listRoundsByPlayerAndCourse = `-- name: ListRoundsByPlayerAndCourse :many
+SELECT id, player_id, course_id, played_at, tees, round_type,
+       total_score, total_points, total_putts, created_at
+FROM rounds
+WHERE player_id = ?
+  AND course_id = ?
+ORDER BY played_at DESC
+`
+
+type ListRoundsByPlayerAndCourseParams struct {
+	PlayerID int64
+	CourseID int64
+}
+
+func (q *Queries) ListRoundsByPlayerAndCourse(ctx context.Context, arg ListRoundsByPlayerAndCourseParams) ([]Round, error) {
+	rows, err := q.db.QueryContext(ctx, listRoundsByPlayerAndCourse, arg.PlayerID, arg.CourseID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Round
+	for rows.Next() {
+		var i Round
+		if err := rows.Scan(
+			&i.ID,
+			&i.PlayerID,
+			&i.CourseID,
+			&i.PlayedAt,
+			&i.Tees,
+			&i.RoundType,
+			&i.TotalScore,
+			&i.TotalPoints,
+			&i.TotalPutts,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listShotsByHole = `-- name: ListShotsByHole :many
+
+SELECT id, hole_id, shot_number, shot_type, club,
+       result, miss, strike_quality, source
+FROM shots
+WHERE hole_id = ?
+ORDER BY shot_number
+`
+
+// ============================================================
+// SHOTS
+// Unique constraint: (hole_id, shot_number)
+// ============================================================
+func (q *Queries) ListShotsByHole(ctx context.Context, holeID int64) ([]Shot, error) {
+	rows, err := q.db.QueryContext(ctx, listShotsByHole, holeID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Shot
+	for rows.Next() {
+		var i Shot
+		if err := rows.Scan(
+			&i.ID,
+			&i.HoleID,
+			&i.ShotNumber,
+			&i.ShotType,
+			&i.Club,
+			&i.Result,
+			&i.Miss,
+			&i.StrikeQuality,
+			&i.Source,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listShotsByHoleAndType = `-- name: ListShotsByHoleAndType :many
+SELECT id, hole_id, shot_number, shot_type, club,
+       result, miss, strike_quality, source
+FROM shots
+WHERE hole_id   = ?
+  AND shot_type = ?
+ORDER BY shot_number
+`
+
+type ListShotsByHoleAndTypeParams struct {
+	HoleID   int64
+	ShotType string
+}
+
+func (q *Queries) ListShotsByHoleAndType(ctx context.Context, arg ListShotsByHoleAndTypeParams) ([]Shot, error) {
+	rows, err := q.db.QueryContext(ctx, listShotsByHoleAndType, arg.HoleID, arg.ShotType)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Shot
+	for rows.Next() {
+		var i Shot
+		if err := rows.Scan(
+			&i.ID,
+			&i.HoleID,
+			&i.ShotNumber,
+			&i.ShotType,
+			&i.Club,
+			&i.Result,
+			&i.Miss,
+			&i.StrikeQuality,
+			&i.Source,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listTeeHoles = `-- name: ListTeeHoles :many
+
+SELECT id, course_hole_id, tee_id, par, stroke_index,
+       distance, tee_centre_lat, tee_centre_lng
+FROM tee_holes
+WHERE tee_id = ?
+ORDER BY course_hole_id
+`
+
+// ============================================================
+// TEE HOLES
+// Unique constraint: (course_hole_id, tee_id)
+// ============================================================
+func (q *Queries) ListTeeHoles(ctx context.Context, teeID int64) ([]TeeHole, error) {
+	rows, err := q.db.QueryContext(ctx, listTeeHoles, teeID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []TeeHole
+	for rows.Next() {
+		var i TeeHole
+		if err := rows.Scan(
+			&i.ID,
+			&i.CourseHoleID,
+			&i.TeeID,
+			&i.Par,
+			&i.StrokeIndex,
+			&i.Distance,
+			&i.TeeCentreLat,
+			&i.TeeCentreLng,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listTees = `-- name: ListTees :many
+
+SELECT id, course_id, name, slope_rating, course_rating
+FROM tees
+ORDER BY course_id, name
+`
+
+// ============================================================
+// TEES
+// Unique constraint: (course_id, name)
+// ============================================================
+func (q *Queries) ListTees(ctx context.Context) ([]Tee, error) {
+	rows, err := q.db.QueryContext(ctx, listTees)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Tee
+	for rows.Next() {
+		var i Tee
+		if err := rows.Scan(
+			&i.ID,
+			&i.CourseID,
+			&i.Name,
+			&i.SlopeRating,
+			&i.CourseRating,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const retireClub = `-- name: RetireClub :exec
+UPDATE player_clubs
+SET removed_date = ?
+WHERE player_id  = ?
+  AND club_name  = ?
+  AND removed_date IS NULL
+`
+
+type RetireClubParams struct {
+	RemovedDate sql.NullTime
+	PlayerID    int64
+	ClubName    string
+}
+
+// Marks a club as removed from the bag
+func (q *Queries) RetireClub(ctx context.Context, arg RetireClubParams) error {
+	_, err := q.db.ExecContext(ctx, retireClub, arg.RemovedDate, arg.PlayerID, arg.ClubName)
+	return err
+}
+
+const updateClubDistances = `-- name: UpdateClubDistances :exec
+UPDATE player_clubs
+SET carry_avg        = ?,
+    carry_reliable   = ?,
+    carry_max        = ?,
+    dispersion_avg_m = ?,
+    dispersion_bias  = ?,
+    sample_size      = ?,
+    calculated_at    = CURRENT_TIMESTAMP
+WHERE id = ?
+`
+
+type UpdateClubDistancesParams struct {
+	CarryAvg       sql.NullFloat64
+	CarryReliable  sql.NullFloat64
+	CarryMax       sql.NullFloat64
+	DispersionAvgM sql.NullFloat64
+	DispersionBias sql.NullString
+	SampleSize     int64
+	ID             int64
+}
+
+// Updates the distance model - called after each GPS-derived recalculation
+func (q *Queries) UpdateClubDistances(ctx context.Context, arg UpdateClubDistancesParams) error {
+	_, err := q.db.ExecContext(ctx, updateClubDistances,
+		arg.CarryAvg,
+		arg.CarryReliable,
+		arg.CarryMax,
+		arg.DispersionAvgM,
+		arg.DispersionBias,
+		arg.SampleSize,
+		arg.ID,
+	)
+	return err
+}
+
+const updateCourse = `-- name: UpdateCourse :exec
+UPDATE courses
+SET name       = ?,
+    golf_api_id = ?
+WHERE id = ?
+`
+
+type UpdateCourseParams struct {
+	Name      string
+	GolfApiID sql.NullString
+	ID        int64
+}
+
+func (q *Queries) UpdateCourse(ctx context.Context, arg UpdateCourseParams) error {
+	_, err := q.db.ExecContext(ctx, updateCourse, arg.Name, arg.GolfApiID, arg.ID)
+	return err
+}
+
+const updateCourseHoleCoordinates = `-- name: UpdateCourseHoleCoordinates :exec
+UPDATE course_holes
+SET green_centre_lat = ?,
+    green_centre_lng = ?
+WHERE id = ?
+`
+
+type UpdateCourseHoleCoordinatesParams struct {
+	GreenCentreLat sql.NullFloat64
+	GreenCentreLng sql.NullFloat64
+	ID             int64
+}
+
+func (q *Queries) UpdateCourseHoleCoordinates(ctx context.Context, arg UpdateCourseHoleCoordinatesParams) error {
+	_, err := q.db.ExecContext(ctx, updateCourseHoleCoordinates, arg.GreenCentreLat, arg.GreenCentreLng, arg.ID)
+	return err
+}
+
+const updateHole = `-- name: UpdateHole :exec
+UPDATE holes
+SET flag_position  = ?,
+    score          = ?,
+    points         = ?,
+    putts          = ?,
+    gir            = ?,
+    scramble_save  = ?,
+    penalty        = ?
+WHERE id = ?
+`
+
+type UpdateHoleParams struct {
+	FlagPosition sql.NullString
+	Score        sql.NullInt64
+	Points       sql.NullInt64
+	Putts        sql.NullInt64
+	Gir          sql.NullBool
+	ScrambleSave sql.NullBool
+	Penalty      sql.NullBool
+	ID           int64
+}
+
+func (q *Queries) UpdateHole(ctx context.Context, arg UpdateHoleParams) error {
+	_, err := q.db.ExecContext(ctx, updateHole,
+		arg.FlagPosition,
+		arg.Score,
+		arg.Points,
+		arg.Putts,
+		arg.Gir,
+		arg.ScrambleSave,
+		arg.Penalty,
+		arg.ID,
+	)
+	return err
+}
+
+const updatePOI = `-- name: UpdatePOI :exec
+UPDATE hole_points_of_interest
+SET specific_tee     = ?,
+    poi_type         = ?,
+    side             = ?,
+    reference_point  = ?,
+    distance_start   = ?,
+    distance_end     = ?,
+    label            = ?
+WHERE id = ?
+`
+
+type UpdatePOIParams struct {
+	SpecificTee    sql.NullString
+	PoiType        string
+	Side           sql.NullString
+	ReferencePoint sql.NullString
+	DistanceStart  sql.NullFloat64
+	DistanceEnd    sql.NullFloat64
+	Label          string
+	ID             int64
+}
+
+func (q *Queries) UpdatePOI(ctx context.Context, arg UpdatePOIParams) error {
+	_, err := q.db.ExecContext(ctx, updatePOI,
+		arg.SpecificTee,
+		arg.PoiType,
+		arg.Side,
+		arg.ReferencePoint,
+		arg.DistanceStart,
+		arg.DistanceEnd,
+		arg.Label,
+		arg.ID,
+	)
+	return err
+}
+
+const updatePlayerHandicap = `-- name: UpdatePlayerHandicap :exec
+UPDATE players
+SET handicap   = ?,
+    updated_at = CURRENT_TIMESTAMP
+WHERE id = ?
+`
+
+type UpdatePlayerHandicapParams struct {
+	Handicap sql.NullFloat64
+	ID       int64
+}
+
+func (q *Queries) UpdatePlayerHandicap(ctx context.Context, arg UpdatePlayerHandicapParams) error {
+	_, err := q.db.ExecContext(ctx, updatePlayerHandicap, arg.Handicap, arg.ID)
+	return err
+}
+
+const updateRoundTotals = `-- name: UpdateRoundTotals :exec
+UPDATE rounds
+SET total_score  = (SELECT SUM(score)  FROM holes WHERE round_id = rounds.id),
+    total_points = (SELECT SUM(points) FROM holes WHERE round_id = rounds.id),
+    total_putts  = (SELECT SUM(putts)  FROM holes WHERE round_id = rounds.id)
+WHERE rounds.id = ?
+`
+
+// Called after holes are inserted/updated to refresh denormalised totals
+func (q *Queries) UpdateRoundTotals(ctx context.Context, id int64) error {
+	_, err := q.db.ExecContext(ctx, updateRoundTotals, id)
+	return err
+}
+
+const updateShot = `-- name: UpdateShot :exec
+UPDATE shots
+SET shot_type     = ?,
+    club          = ?,
+    result        = ?,
+    miss          = ?,
+    strike_quality = ?,
+    source        = ?
+WHERE id = ?
+`
+
+type UpdateShotParams struct {
+	ShotType      string
+	Club          sql.NullString
+	Result        sql.NullString
+	Miss          sql.NullString
+	StrikeQuality sql.NullString
+	Source        string
+	ID            int64
+}
+
+func (q *Queries) UpdateShot(ctx context.Context, arg UpdateShotParams) error {
+	_, err := q.db.ExecContext(ctx, updateShot,
+		arg.ShotType,
+		arg.Club,
+		arg.Result,
+		arg.Miss,
+		arg.StrikeQuality,
+		arg.Source,
+		arg.ID,
+	)
+	return err
+}
+
+const updateTee = `-- name: UpdateTee :exec
+UPDATE tees
+SET slope_rating  = ?,
+    course_rating = ?
+WHERE id = ?
+`
+
+type UpdateTeeParams struct {
+	SlopeRating  sql.NullInt64
+	CourseRating sql.NullFloat64
+	ID           int64
+}
+
+func (q *Queries) UpdateTee(ctx context.Context, arg UpdateTeeParams) error {
+	_, err := q.db.ExecContext(ctx, updateTee, arg.SlopeRating, arg.CourseRating, arg.ID)
+	return err
+}
+
+const updateTeeHole = `-- name: UpdateTeeHole :exec
+UPDATE tee_holes
+SET par             = ?,
+    stroke_index    = ?,
+    distance        = ?,
+    tee_centre_lat  = ?,
+    tee_centre_lng  = ?
+WHERE id = ?
+`
+
+type UpdateTeeHoleParams struct {
+	Par          int64
+	StrokeIndex  sql.NullInt64
+	Distance     int64
+	TeeCentreLat sql.NullFloat64
+	TeeCentreLng sql.NullFloat64
+	ID           int64
+}
+
+func (q *Queries) UpdateTeeHole(ctx context.Context, arg UpdateTeeHoleParams) error {
+	_, err := q.db.ExecContext(ctx, updateTeeHole,
+		arg.Par,
+		arg.StrokeIndex,
+		arg.Distance,
+		arg.TeeCentreLat,
+		arg.TeeCentreLng,
+		arg.ID,
+	)
+	return err
 }
