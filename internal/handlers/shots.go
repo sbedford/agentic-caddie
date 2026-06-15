@@ -1,14 +1,12 @@
 package handlers
 
 import (
-	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
 	"log"
 	"net/http"
 	"strconv"
-	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/sbedford/agentic-caddie/internal/db"
@@ -85,10 +83,7 @@ func (h ShotsHandler) ListShotsByHole(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-	defer cancel()
-
-	shots, err := h.Queries.ListShotsByHole(ctx, holeID)
+	shots, err := h.Queries.ListShotsByHole(r.Context(), holeID)
 	if err != nil {
 		log.Printf("failed to list shots: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
@@ -123,10 +118,7 @@ func (h ShotsHandler) ListShotsByHoleAndType(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-	defer cancel()
-
-	shots, err := h.Queries.ListShotsByHoleAndType(ctx, db.ListShotsByHoleAndTypeParams{
+	shots, err := h.Queries.ListShotsByHoleAndType(r.Context(), db.ListShotsByHoleAndTypeParams{
 		HoleID:   holeID,
 		ShotType: chi.URLParam(r, "shotType"),
 	})
@@ -164,10 +156,7 @@ func (h ShotsHandler) GetShotByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-	defer cancel()
-
-	shot, err := h.Queries.GetShotByID(ctx, id)
+	shot, err := h.Queries.GetShotByID(r.Context(), id)
 	if errors.Is(err, sql.ErrNoRows) {
 		http.Error(w, "Shot not found", http.StatusNotFound)
 		return
@@ -207,10 +196,7 @@ func (h ShotsHandler) GetShotByHoleAndNumber(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-	defer cancel()
-
-	shot, err := h.Queries.GetShotByHoleAndNumber(ctx, db.GetShotByHoleAndNumberParams{
+	shot, err := h.Queries.GetShotByHoleAndNumber(r.Context(), db.GetShotByHoleAndNumberParams{
 		HoleID:     holeID,
 		ShotNumber: shotNumber,
 	})
@@ -254,14 +240,21 @@ func (h ShotsHandler) CreateShot(w http.ResponseWriter, r *http.Request) {
 		req.Source = "manual"
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-	defer cancel()
-
-	if !checkVocab(w, ctx, h.Queries, "shot_type", req.ShotType) { return }
-	if !checkVocab(w, ctx, h.Queries, "shot_source", req.Source) { return }
-	if !checkOptVocab(w, ctx, h.Queries, "shot_result", req.Result) { return }
-	if !checkOptVocab(w, ctx, h.Queries, "shot_miss", req.Miss) { return }
-	if !checkOptVocab(w, ctx, h.Queries, "shot_strike", req.StrikeQuality) { return }
+	if !checkVocab(w, r.Context(), h.Queries, "shot_type", req.ShotType) {
+		return
+	}
+	if !checkVocab(w, r.Context(), h.Queries, "shot_source", req.Source) {
+		return
+	}
+	if !checkOptVocab(w, r.Context(), h.Queries, "shot_result", req.Result) {
+		return
+	}
+	if !checkOptVocab(w, r.Context(), h.Queries, "shot_miss", req.Miss) {
+		return
+	}
+	if !checkOptVocab(w, r.Context(), h.Queries, "shot_strike", req.StrikeQuality) {
+		return
+	}
 
 	params := db.CreateShotParams{
 		HoleID:     req.HoleID,
@@ -282,7 +275,7 @@ func (h ShotsHandler) CreateShot(w http.ResponseWriter, r *http.Request) {
 		params.StrikeQuality = sql.NullString{String: *req.StrikeQuality, Valid: true}
 	}
 
-	result, err := h.Queries.CreateShot(ctx, params)
+	result, err := h.Queries.CreateShot(r.Context(), params)
 	if err != nil {
 		log.Printf("failed to create shot: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
@@ -296,7 +289,7 @@ func (h ShotsHandler) CreateShot(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	shot, err := h.Queries.GetShotByID(ctx, id)
+	shot, err := h.Queries.GetShotByID(r.Context(), id)
 	if err != nil {
 		log.Printf("failed to fetch created shot: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
@@ -331,14 +324,21 @@ func (h ShotsHandler) UpdateShot(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-	defer cancel()
-
-	if !checkVocab(w, ctx, h.Queries, "shot_type", req.ShotType) { return }
-	if !checkVocab(w, ctx, h.Queries, "shot_source", req.Source) { return }
-	if !checkOptVocab(w, ctx, h.Queries, "shot_result", req.Result) { return }
-	if !checkOptVocab(w, ctx, h.Queries, "shot_miss", req.Miss) { return }
-	if !checkOptVocab(w, ctx, h.Queries, "shot_strike", req.StrikeQuality) { return }
+	if !checkVocab(w, r.Context(), h.Queries, "shot_type", req.ShotType) {
+		return
+	}
+	if !checkVocab(w, r.Context(), h.Queries, "shot_source", req.Source) {
+		return
+	}
+	if !checkOptVocab(w, r.Context(), h.Queries, "shot_result", req.Result) {
+		return
+	}
+	if !checkOptVocab(w, r.Context(), h.Queries, "shot_miss", req.Miss) {
+		return
+	}
+	if !checkOptVocab(w, r.Context(), h.Queries, "shot_strike", req.StrikeQuality) {
+		return
+	}
 
 	params := db.UpdateShotParams{ID: id, ShotType: req.ShotType, Source: req.Source}
 	if req.Club != nil {
@@ -354,7 +354,7 @@ func (h ShotsHandler) UpdateShot(w http.ResponseWriter, r *http.Request) {
 		params.StrikeQuality = sql.NullString{String: *req.StrikeQuality, Valid: true}
 	}
 
-	if err = h.Queries.UpdateShot(ctx, params); err != nil {
+	if err = h.Queries.UpdateShot(r.Context(), params); err != nil {
 		log.Printf("failed to update shot: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
@@ -378,10 +378,7 @@ func (h ShotsHandler) DeleteShot(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-	defer cancel()
-
-	if err = h.Queries.DeleteShot(ctx, id); err != nil {
+	if err = h.Queries.DeleteShot(r.Context(), id); err != nil {
 		log.Printf("failed to delete shot: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
@@ -405,10 +402,7 @@ func (h ShotsHandler) DeleteShotsByHole(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-	defer cancel()
-
-	if err = h.Queries.DeleteShotsByHole(ctx, holeID); err != nil {
+	if err = h.Queries.DeleteShotsByHole(r.Context(), holeID); err != nil {
 		log.Printf("failed to delete shots: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
@@ -444,10 +438,7 @@ func (h ShotsHandler) ReorderShots(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-	defer cancel()
-
-	tx, err := h.DB.BeginTx(ctx, nil)
+	tx, err := h.DB.BeginTx(r.Context(), nil)
 	if err != nil {
 		log.Printf("failed to begin transaction: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
@@ -456,7 +447,7 @@ func (h ShotsHandler) ReorderShots(w http.ResponseWriter, r *http.Request) {
 	defer tx.Rollback() //nolint:errcheck
 
 	// Shift all shot_numbers to a high range to avoid unique constraint conflicts
-	if _, err = tx.ExecContext(ctx,
+	if _, err = tx.ExecContext(r.Context(),
 		"UPDATE shots SET shot_number = shot_number + 10000 WHERE hole_id = ?", holeID); err != nil {
 		log.Printf("failed to shift shot numbers: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
@@ -465,7 +456,7 @@ func (h ShotsHandler) ReorderShots(w http.ResponseWriter, r *http.Request) {
 
 	// Assign final positions in the requested order
 	for i, id := range req.IDs {
-		if _, err = tx.ExecContext(ctx,
+		if _, err = tx.ExecContext(r.Context(),
 			"UPDATE shots SET shot_number = ? WHERE id = ? AND hole_id = ?",
 			i+1, id, holeID); err != nil {
 			log.Printf("failed to assign shot number: %v", err)

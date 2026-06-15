@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -91,10 +90,7 @@ func (h ClubsHandler) ListClubsByPlayer(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-	defer cancel()
-
-	clubs, err := h.Queries.ListClubsByPlayer(ctx, playerID)
+	clubs, err := h.Queries.ListClubsByPlayer(r.Context(), playerID)
 	if err != nil {
 		log.Printf("failed to list clubs: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
@@ -128,10 +124,7 @@ func (h ClubsHandler) ListActiveClubsByPlayer(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-	defer cancel()
-
-	clubs, err := h.Queries.ListActiveClubsByPlayer(ctx, playerID)
+	clubs, err := h.Queries.ListActiveClubsByPlayer(r.Context(), playerID)
 	if err != nil {
 		log.Printf("failed to list active clubs: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
@@ -166,10 +159,7 @@ func (h ClubsHandler) GetClubByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-	defer cancel()
-
-	club, err := h.Queries.GetClubByID(ctx, id)
+	club, err := h.Queries.GetClubByID(r.Context(), id)
 	if errors.Is(err, sql.ErrNoRows) {
 		http.Error(w, "Club not found", http.StatusNotFound)
 		return
@@ -204,10 +194,7 @@ func (h ClubsHandler) GetClubByPlayerAndName(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-	defer cancel()
-
-	club, err := h.Queries.GetClubByPlayerAndName(ctx, db.GetClubByPlayerAndNameParams{
+	club, err := h.Queries.GetClubByPlayerAndName(r.Context(), db.GetClubByPlayerAndNameParams{
 		PlayerID: playerID,
 		ClubName: chi.URLParam(r, "clubName"),
 	})
@@ -251,10 +238,7 @@ func (h ClubsHandler) GetClubByPlayerNameAndDate(w http.ResponseWriter, r *http.
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-	defer cancel()
-
-	club, err := h.Queries.GetClubByPlayerNameAndDate(ctx, db.GetClubByPlayerNameAndDateParams{
+	club, err := h.Queries.GetClubByPlayerNameAndDate(r.Context(), db.GetClubByPlayerNameAndDateParams{
 		PlayerID:  playerID,
 		ClubName:  chi.URLParam(r, "clubName"),
 		AddedDate: addedDate,
@@ -302,10 +286,9 @@ func (h ClubsHandler) CreateClub(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-	defer cancel()
-
-	if !checkOptVocab(w, ctx, h.Queries, "dispersion_bias", req.DispersionBias) { return }
+	if !checkOptVocab(w, r.Context(), h.Queries, "dispersion_bias", req.DispersionBias) {
+		return
+	}
 
 	params := db.CreateClubParams{
 		PlayerID:   req.PlayerID,
@@ -329,7 +312,7 @@ func (h ClubsHandler) CreateClub(w http.ResponseWriter, r *http.Request) {
 		params.DispersionBias = sql.NullString{String: *req.DispersionBias, Valid: true}
 	}
 
-	result, err := h.Queries.CreateClub(ctx, params)
+	result, err := h.Queries.CreateClub(r.Context(), params)
 	if err != nil {
 		log.Printf("failed to create club: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
@@ -343,7 +326,7 @@ func (h ClubsHandler) CreateClub(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	club, err := h.Queries.GetClubByID(ctx, id)
+	club, err := h.Queries.GetClubByID(r.Context(), id)
 	if err != nil {
 		log.Printf("failed to fetch created club: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
@@ -385,10 +368,7 @@ func (h ClubsHandler) RetireClub(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-	defer cancel()
-
-	if err = h.Queries.RetireClub(ctx, db.RetireClubParams{
+	if err = h.Queries.RetireClub(r.Context(), db.RetireClubParams{
 		PlayerID:    playerID,
 		ClubName:    chi.URLParam(r, "clubName"),
 		RemovedDate: sql.NullTime{Time: removedDate, Valid: true},
@@ -424,10 +404,9 @@ func (h ClubsHandler) UpdateClubDistances(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-	defer cancel()
-
-	if !checkOptVocab(w, ctx, h.Queries, "dispersion_bias", req.DispersionBias) { return }
+	if !checkOptVocab(w, r.Context(), h.Queries, "dispersion_bias", req.DispersionBias) {
+		return
+	}
 
 	params := db.UpdateClubDistancesParams{ID: id, SampleSize: req.SampleSize}
 	if req.CarryAvg != nil {
@@ -446,7 +425,7 @@ func (h ClubsHandler) UpdateClubDistances(w http.ResponseWriter, r *http.Request
 		params.DispersionBias = sql.NullString{String: *req.DispersionBias, Valid: true}
 	}
 
-	if err = h.Queries.UpdateClubDistances(ctx, params); err != nil {
+	if err = h.Queries.UpdateClubDistances(r.Context(), params); err != nil {
 		log.Printf("failed to update club distances: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
@@ -470,10 +449,7 @@ func (h ClubsHandler) DeleteClub(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-	defer cancel()
-
-	if err = h.Queries.DeleteClub(ctx, id); err != nil {
+	if err = h.Queries.DeleteClub(r.Context(), id); err != nil {
 		log.Printf("failed to delete club: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return

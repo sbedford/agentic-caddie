@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -59,10 +58,7 @@ func (h CommentaryHandler) ListCommentaryByScope(w http.ResponseWriter, r *http.
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-	defer cancel()
-
-	entries, err := h.Queries.ListCommentaryByScope(ctx, db.ListCommentaryByScopeParams{
+	entries, err := h.Queries.ListCommentaryByScope(r.Context(), db.ListCommentaryByScopeParams{
 		Scope:   chi.URLParam(r, "scope"),
 		ScopeID: scopeID,
 	})
@@ -101,10 +97,7 @@ func (h CommentaryHandler) GetLatestCommentaryByScope(w http.ResponseWriter, r *
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-	defer cancel()
-
-	entry, err := h.Queries.GetLatestCommentaryByScope(ctx, db.GetLatestCommentaryByScopeParams{
+	entry, err := h.Queries.GetLatestCommentaryByScope(r.Context(), db.GetLatestCommentaryByScopeParams{
 		Scope:   chi.URLParam(r, "scope"),
 		ScopeID: scopeID,
 	})
@@ -141,10 +134,7 @@ func (h CommentaryHandler) GetCommentaryByID(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-	defer cancel()
-
-	entry, err := h.Queries.GetCommentaryByID(ctx, id)
+	entry, err := h.Queries.GetCommentaryByID(r.Context(), id)
 	if errors.Is(err, sql.ErrNoRows) {
 		http.Error(w, "Commentary not found", http.StatusNotFound)
 		return
@@ -182,10 +172,7 @@ func (h CommentaryHandler) CreateCommentary(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-	defer cancel()
-
-	result, err := h.Queries.CreateCommentary(ctx, db.CreateCommentaryParams{
+	result, err := h.Queries.CreateCommentary(r.Context(), db.CreateCommentaryParams{
 		Scope:   req.Scope,
 		ScopeID: req.ScopeID,
 		Content: req.Content,
@@ -203,7 +190,7 @@ func (h CommentaryHandler) CreateCommentary(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	entry, err := h.Queries.GetCommentaryByID(ctx, id)
+	entry, err := h.Queries.GetCommentaryByID(r.Context(), id)
 	if err != nil {
 		log.Printf("failed to fetch created commentary: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
@@ -231,10 +218,7 @@ func (h CommentaryHandler) DeleteCommentaryByScope(w http.ResponseWriter, r *htt
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-	defer cancel()
-
-	if err = h.Queries.DeleteCommentaryByScope(ctx, db.DeleteCommentaryByScopeParams{
+	if err = h.Queries.DeleteCommentaryByScope(r.Context(), db.DeleteCommentaryByScopeParams{
 		Scope:   chi.URLParam(r, "scope"),
 		ScopeID: scopeID,
 	}); err != nil {
@@ -261,10 +245,7 @@ func (h CommentaryHandler) DeleteCommentary(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-	defer cancel()
-
-	if err = h.Queries.DeleteCommentary(ctx, id); err != nil {
+	if err = h.Queries.DeleteCommentary(r.Context(), id); err != nil {
 		log.Printf("failed to delete commentary: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return

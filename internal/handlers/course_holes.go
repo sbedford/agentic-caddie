@@ -1,14 +1,12 @@
 package handlers
 
 import (
-	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
 	"log"
 	"net/http"
 	"strconv"
-	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/sbedford/agentic-caddie/internal/db"
@@ -64,10 +62,7 @@ func (h CourseHolesHandler) ListCourseHoles(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-	defer cancel()
-
-	holes, err := h.Queries.ListCourseHoles(ctx, courseID)
+	holes, err := h.Queries.ListCourseHoles(r.Context(), courseID)
 	if err != nil {
 		log.Printf("failed to list course holes: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
@@ -102,10 +97,7 @@ func (h CourseHolesHandler) GetCourseHoleByID(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-	defer cancel()
-
-	hole, err := h.Queries.GetCourseHoleByID(ctx, id)
+	hole, err := h.Queries.GetCourseHoleByID(r.Context(), id)
 	if errors.Is(err, sql.ErrNoRows) {
 		http.Error(w, "Course hole not found", http.StatusNotFound)
 		return
@@ -145,10 +137,7 @@ func (h CourseHolesHandler) GetCourseHoleByCourseAndNumber(w http.ResponseWriter
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-	defer cancel()
-
-	hole, err := h.Queries.GetCourseHoleByCourseAndNumber(ctx, db.GetCourseHoleByCourseAndNumberParams{
+	hole, err := h.Queries.GetCourseHoleByCourseAndNumber(r.Context(), db.GetCourseHoleByCourseAndNumberParams{
 		CourseID:   courseID,
 		HoleNumber: holeNumber,
 	})
@@ -189,9 +178,6 @@ func (h CourseHolesHandler) CreateCourseHole(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-	defer cancel()
-
 	params := db.CreateCourseHoleParams{CourseID: req.CourseID, HoleNumber: req.HoleNumber}
 	if req.GreenCentreLat != nil {
 		params.GreenCentreLat = sql.NullFloat64{Float64: *req.GreenCentreLat, Valid: true}
@@ -200,7 +186,7 @@ func (h CourseHolesHandler) CreateCourseHole(w http.ResponseWriter, r *http.Requ
 		params.GreenCentreLng = sql.NullFloat64{Float64: *req.GreenCentreLng, Valid: true}
 	}
 
-	result, err := h.Queries.CreateCourseHole(ctx, params)
+	result, err := h.Queries.CreateCourseHole(r.Context(), params)
 	if err != nil {
 		log.Printf("failed to create course hole: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
@@ -214,7 +200,7 @@ func (h CourseHolesHandler) CreateCourseHole(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	hole, err := h.Queries.GetCourseHoleByID(ctx, id)
+	hole, err := h.Queries.GetCourseHoleByID(r.Context(), id)
 	if err != nil {
 		log.Printf("failed to fetch created course hole: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
@@ -249,9 +235,6 @@ func (h CourseHolesHandler) UpdateCourseHoleCoordinates(w http.ResponseWriter, r
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-	defer cancel()
-
 	params := db.UpdateCourseHoleCoordinatesParams{ID: id}
 	if req.GreenCentreLat != nil {
 		params.GreenCentreLat = sql.NullFloat64{Float64: *req.GreenCentreLat, Valid: true}
@@ -260,7 +243,7 @@ func (h CourseHolesHandler) UpdateCourseHoleCoordinates(w http.ResponseWriter, r
 		params.GreenCentreLng = sql.NullFloat64{Float64: *req.GreenCentreLng, Valid: true}
 	}
 
-	if err = h.Queries.UpdateCourseHoleCoordinates(ctx, params); err != nil {
+	if err = h.Queries.UpdateCourseHoleCoordinates(r.Context(), params); err != nil {
 		log.Printf("failed to update course hole coordinates: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
@@ -284,10 +267,7 @@ func (h CourseHolesHandler) DeleteCourseHole(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-	defer cancel()
-
-	if err = h.Queries.DeleteCourseHole(ctx, id); err != nil {
+	if err = h.Queries.DeleteCourseHole(r.Context(), id); err != nil {
 		log.Printf("failed to delete course hole: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return

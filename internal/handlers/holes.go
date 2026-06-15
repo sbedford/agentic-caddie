@@ -1,14 +1,12 @@
 package handlers
 
 import (
-	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
 	"log"
 	"net/http"
 	"strconv"
-	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/sbedford/agentic-caddie/internal/db"
@@ -87,10 +85,7 @@ func (h HolesHandler) ListHolesByRound(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-	defer cancel()
-
-	holes, err := h.Queries.ListHolesByRound(ctx, roundID)
+	holes, err := h.Queries.ListHolesByRound(r.Context(), roundID)
 	if err != nil {
 		log.Printf("failed to list holes: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
@@ -125,10 +120,7 @@ func (h HolesHandler) GetHoleByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-	defer cancel()
-
-	hole, err := h.Queries.GetHoleByID(ctx, id)
+	hole, err := h.Queries.GetHoleByID(r.Context(), id)
 	if errors.Is(err, sql.ErrNoRows) {
 		http.Error(w, "Hole not found", http.StatusNotFound)
 		return
@@ -168,10 +160,7 @@ func (h HolesHandler) GetHoleByRoundAndNumber(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-	defer cancel()
-
-	hole, err := h.Queries.GetHoleByRoundAndNumber(ctx, db.GetHoleByRoundAndNumberParams{
+	hole, err := h.Queries.GetHoleByRoundAndNumber(r.Context(), db.GetHoleByRoundAndNumberParams{
 		RoundID:    roundID,
 		HoleNumber: holeNumber,
 	})
@@ -212,10 +201,9 @@ func (h HolesHandler) CreateHole(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-	defer cancel()
-
-	if !checkOptVocab(w, ctx, h.Queries, "flag_position", req.FlagPosition) { return }
+	if !checkOptVocab(w, r.Context(), h.Queries, "flag_position", req.FlagPosition) {
+		return
+	}
 
 	params := db.CreateHoleParams{
 		RoundID:      req.RoundID,
@@ -244,7 +232,7 @@ func (h HolesHandler) CreateHole(w http.ResponseWriter, r *http.Request) {
 		params.Penalty = sql.NullBool{Bool: *req.Penalty, Valid: true}
 	}
 
-	result, err := h.Queries.CreateHole(ctx, params)
+	result, err := h.Queries.CreateHole(r.Context(), params)
 	if err != nil {
 		log.Printf("failed to create hole: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
@@ -258,7 +246,7 @@ func (h HolesHandler) CreateHole(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	hole, err := h.Queries.GetHoleByID(ctx, id)
+	hole, err := h.Queries.GetHoleByID(r.Context(), id)
 	if err != nil {
 		log.Printf("failed to fetch created hole: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
@@ -293,10 +281,9 @@ func (h HolesHandler) UpdateHole(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-	defer cancel()
-
-	if !checkOptVocab(w, ctx, h.Queries, "flag_position", req.FlagPosition) { return }
+	if !checkOptVocab(w, r.Context(), h.Queries, "flag_position", req.FlagPosition) {
+		return
+	}
 
 	params := db.UpdateHoleParams{ID: id}
 	if req.FlagPosition != nil {
@@ -321,7 +308,7 @@ func (h HolesHandler) UpdateHole(w http.ResponseWriter, r *http.Request) {
 		params.Penalty = sql.NullBool{Bool: *req.Penalty, Valid: true}
 	}
 
-	if err = h.Queries.UpdateHole(ctx, params); err != nil {
+	if err = h.Queries.UpdateHole(r.Context(), params); err != nil {
 		log.Printf("failed to update hole: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
@@ -345,10 +332,7 @@ func (h HolesHandler) DeleteHole(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-	defer cancel()
-
-	if err = h.Queries.DeleteHole(ctx, id); err != nil {
+	if err = h.Queries.DeleteHole(r.Context(), id); err != nil {
 		log.Printf("failed to delete hole: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return

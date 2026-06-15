@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -66,10 +65,8 @@ func toRoundResponse(r db.Round) roundResponse {
 // @Failure     500      {string} string "Internal server error"
 // @Router      /rounds [get]
 func (h RoundsHandler) ListRounds(w http.ResponseWriter, r *http.Request) {
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-	defer cancel()
 
-	rounds, err := h.Queries.ListRounds(ctx)
+	rounds, err := h.Queries.ListRounds(r.Context())
 	if err != nil {
 		log.Printf("failed to list rounds: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
@@ -103,10 +100,7 @@ func (h RoundsHandler) ListRoundsByPlayer(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-	defer cancel()
-
-	rounds, err := h.Queries.ListRoundsByPlayer(ctx, playerID)
+	rounds, err := h.Queries.ListRoundsByPlayer(r.Context(), playerID)
 	if err != nil {
 		log.Printf("failed to list rounds: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
@@ -146,10 +140,7 @@ func (h RoundsHandler) ListRoundsByPlayerAndCourse(w http.ResponseWriter, r *htt
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-	defer cancel()
-
-	rounds, err := h.Queries.ListRoundsByPlayerAndCourse(ctx, db.ListRoundsByPlayerAndCourseParams{
+	rounds, err := h.Queries.ListRoundsByPlayerAndCourse(r.Context(), db.ListRoundsByPlayerAndCourseParams{
 		PlayerID: playerID,
 		CourseID: courseID,
 	})
@@ -187,10 +178,7 @@ func (h RoundsHandler) GetRoundByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-	defer cancel()
-
-	round, err := h.Queries.GetRoundByID(ctx, id)
+	round, err := h.Queries.GetRoundByID(r.Context(), id)
 	if errors.Is(err, sql.ErrNoRows) {
 		http.Error(w, "Round not found", http.StatusNotFound)
 		return
@@ -230,10 +218,7 @@ func (h RoundsHandler) GetRoundByPlayerAndDate(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-	defer cancel()
-
-	round, err := h.Queries.GetRoundByPlayerAndDate(ctx, db.GetRoundByPlayerAndDateParams{
+	round, err := h.Queries.GetRoundByPlayerAndDate(r.Context(), db.GetRoundByPlayerAndDateParams{
 		PlayerID: playerID,
 		PlayedAt: playedAt,
 	})
@@ -280,13 +265,14 @@ func (h RoundsHandler) CreateRound(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-	defer cancel()
+	if !checkVocab(w, r.Context(), h.Queries, "round_type", req.RoundType) {
+		return
+	}
+	if req.CompetitionType != "" && !checkVocab(w, r.Context(), h.Queries, "competition_type", req.CompetitionType) {
+		return
+	}
 
-	if !checkVocab(w, ctx, h.Queries, "round_type", req.RoundType) { return }
-	if req.CompetitionType != "" && !checkVocab(w, ctx, h.Queries, "competition_type", req.CompetitionType) { return }
-
-	result, err := h.Queries.CreateRound(ctx, db.CreateRoundParams{
+	result, err := h.Queries.CreateRound(r.Context(), db.CreateRoundParams{
 		PlayerID:  req.PlayerID,
 		CourseID:  req.CourseID,
 		PlayedAt:  playedAt,
@@ -306,7 +292,7 @@ func (h RoundsHandler) CreateRound(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	round, err := h.Queries.GetRoundByID(ctx, id)
+	round, err := h.Queries.GetRoundByID(r.Context(), id)
 	if err != nil {
 		log.Printf("failed to fetch created round: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
@@ -333,10 +319,7 @@ func (h RoundsHandler) UpdateRoundTotals(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-	defer cancel()
-
-	if err = h.Queries.UpdateRoundTotals(ctx, id); err != nil {
+	if err = h.Queries.UpdateRoundTotals(r.Context(), id); err != nil {
 		log.Printf("failed to update round totals: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
@@ -360,10 +343,7 @@ func (h RoundsHandler) DeleteRound(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-	defer cancel()
-
-	if err = h.Queries.DeleteRound(ctx, id); err != nil {
+	if err = h.Queries.DeleteRound(r.Context(), id); err != nil {
 		log.Printf("failed to delete round: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return

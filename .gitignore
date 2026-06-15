@@ -17,6 +17,8 @@ dist/
 bin/
 *.db
 
+.vite 
+
 # Code coverage profiles and other test artifacts
 *.out
 coverage.*

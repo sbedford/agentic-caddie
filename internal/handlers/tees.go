@@ -1,14 +1,12 @@
 package handlers
 
 import (
-	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
 	"log"
 	"net/http"
 	"strconv"
-	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/sbedford/agentic-caddie/internal/db"
@@ -56,10 +54,8 @@ func toTeeResponse(t db.Tee) teeResponse {
 // @Failure     500 {string} string "Internal server error"
 // @Router      /tees [get]
 func (h TeesHandler) ListTees(w http.ResponseWriter, r *http.Request) {
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-	defer cancel()
 
-	tees, err := h.Queries.ListTees(ctx)
+	tees, err := h.Queries.ListTees(r.Context())
 	if err != nil {
 		log.Printf("failed to list tees: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
@@ -94,10 +90,7 @@ func (h TeesHandler) GetTeeByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-	defer cancel()
-
-	tee, err := h.Queries.GetTeeByID(ctx, id)
+	tee, err := h.Queries.GetTeeByID(r.Context(), id)
 	if errors.Is(err, sql.ErrNoRows) {
 		http.Error(w, "Tee not found", http.StatusNotFound)
 		return
@@ -130,10 +123,7 @@ func (h TeesHandler) GetTeesByCourse(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-	defer cancel()
-
-	tees, err := h.Queries.GetTeesByCourse(ctx, courseID)
+	tees, err := h.Queries.GetTeesByCourse(r.Context(), courseID)
 	if err != nil {
 		log.Printf("failed to get tees by course: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
@@ -169,10 +159,7 @@ func (h TeesHandler) GetTeeByCourseAndName(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-	defer cancel()
-
-	tee, err := h.Queries.GetTeeByCourseAndName(ctx, db.GetTeeByCourseAndNameParams{
+	tee, err := h.Queries.GetTeeByCourseAndName(r.Context(), db.GetTeeByCourseAndNameParams{
 		CourseID: courseID,
 		Name:     chi.URLParam(r, "name"),
 	})
@@ -213,9 +200,6 @@ func (h TeesHandler) CreateTee(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-	defer cancel()
-
 	params := db.CreateTeeParams{CourseID: req.CourseID, Name: req.Name}
 	if req.SlopeRating != nil {
 		params.SlopeRating = sql.NullInt64{Int64: *req.SlopeRating, Valid: true}
@@ -224,7 +208,7 @@ func (h TeesHandler) CreateTee(w http.ResponseWriter, r *http.Request) {
 		params.CourseRating = sql.NullFloat64{Float64: *req.CourseRating, Valid: true}
 	}
 
-	result, err := h.Queries.CreateTee(ctx, params)
+	result, err := h.Queries.CreateTee(r.Context(), params)
 	if err != nil {
 		log.Printf("failed to create tee: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
@@ -238,7 +222,7 @@ func (h TeesHandler) CreateTee(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tee, err := h.Queries.GetTeeByID(ctx, id)
+	tee, err := h.Queries.GetTeeByID(r.Context(), id)
 	if err != nil {
 		log.Printf("failed to fetch created tee: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
@@ -273,9 +257,6 @@ func (h TeesHandler) UpdateTee(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-	defer cancel()
-
 	params := db.UpdateTeeParams{ID: id}
 	if req.SlopeRating != nil {
 		params.SlopeRating = sql.NullInt64{Int64: *req.SlopeRating, Valid: true}
@@ -284,7 +265,7 @@ func (h TeesHandler) UpdateTee(w http.ResponseWriter, r *http.Request) {
 		params.CourseRating = sql.NullFloat64{Float64: *req.CourseRating, Valid: true}
 	}
 
-	if err = h.Queries.UpdateTee(ctx, params); err != nil {
+	if err = h.Queries.UpdateTee(r.Context(), params); err != nil {
 		log.Printf("failed to update tee: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
@@ -308,10 +289,7 @@ func (h TeesHandler) DeleteTee(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-	defer cancel()
-
-	if err = h.Queries.DeleteTee(ctx, id); err != nil {
+	if err = h.Queries.DeleteTee(r.Context(), id); err != nil {
 		log.Printf("failed to delete tee: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return

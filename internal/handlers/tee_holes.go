@@ -1,14 +1,12 @@
 package handlers
 
 import (
-	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
 	"log"
 	"net/http"
 	"strconv"
-	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/sbedford/agentic-caddie/internal/db"
@@ -76,10 +74,7 @@ func (h TeeHolesHandler) ListTeeHoles(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-	defer cancel()
-
-	holes, err := h.Queries.ListTeeHoles(ctx, teeID)
+	holes, err := h.Queries.ListTeeHoles(r.Context(), teeID)
 	if err != nil {
 		log.Printf("failed to list tee holes: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
@@ -114,10 +109,7 @@ func (h TeeHolesHandler) GetTeeHoleByID(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-	defer cancel()
-
-	hole, err := h.Queries.GetTeeHoleByID(ctx, id)
+	hole, err := h.Queries.GetTeeHoleByID(r.Context(), id)
 	if errors.Is(err, sql.ErrNoRows) {
 		http.Error(w, "Tee hole not found", http.StatusNotFound)
 		return
@@ -157,10 +149,7 @@ func (h TeeHolesHandler) GetTeeHoleByHoleAndTee(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-	defer cancel()
-
-	hole, err := h.Queries.GetTeeHoleByHoleAndTee(ctx, db.GetTeeHoleByHoleAndTeeParams{
+	hole, err := h.Queries.GetTeeHoleByHoleAndTee(r.Context(), db.GetTeeHoleByHoleAndTeeParams{
 		CourseHoleID: courseHoleID,
 		TeeID:        teeID,
 	})
@@ -201,9 +190,6 @@ func (h TeeHolesHandler) CreateTeeHole(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-	defer cancel()
-
 	params := db.CreateTeeHoleParams{
 		CourseHoleID: req.CourseHoleID,
 		TeeID:        req.TeeID,
@@ -220,7 +206,7 @@ func (h TeeHolesHandler) CreateTeeHole(w http.ResponseWriter, r *http.Request) {
 		params.TeeCentreLng = sql.NullFloat64{Float64: *req.TeeCentreLng, Valid: true}
 	}
 
-	result, err := h.Queries.CreateTeeHole(ctx, params)
+	result, err := h.Queries.CreateTeeHole(r.Context(), params)
 	if err != nil {
 		log.Printf("failed to create tee hole: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
@@ -234,7 +220,7 @@ func (h TeeHolesHandler) CreateTeeHole(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	hole, err := h.Queries.GetTeeHoleByID(ctx, id)
+	hole, err := h.Queries.GetTeeHoleByID(r.Context(), id)
 	if err != nil {
 		log.Printf("failed to fetch created tee hole: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
@@ -269,9 +255,6 @@ func (h TeeHolesHandler) UpdateTeeHole(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-	defer cancel()
-
 	params := db.UpdateTeeHoleParams{ID: id, Par: req.Par, Distance: req.Distance}
 	if req.StrokeIndex != nil {
 		params.StrokeIndex = sql.NullInt64{Int64: *req.StrokeIndex, Valid: true}
@@ -283,7 +266,7 @@ func (h TeeHolesHandler) UpdateTeeHole(w http.ResponseWriter, r *http.Request) {
 		params.TeeCentreLng = sql.NullFloat64{Float64: *req.TeeCentreLng, Valid: true}
 	}
 
-	if err = h.Queries.UpdateTeeHole(ctx, params); err != nil {
+	if err = h.Queries.UpdateTeeHole(r.Context(), params); err != nil {
 		log.Printf("failed to update tee hole: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
@@ -307,10 +290,7 @@ func (h TeeHolesHandler) DeleteTeeHole(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-	defer cancel()
-
-	if err = h.Queries.DeleteTeeHole(ctx, id); err != nil {
+	if err = h.Queries.DeleteTeeHole(r.Context(), id); err != nil {
 		log.Printf("failed to delete tee hole: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return

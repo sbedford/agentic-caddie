@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -52,10 +51,8 @@ func toCourseResponse(c db.Course) courseResponse {
 // @Failure     500 {string} string "Internal server error"
 // @Router      /courses [get]
 func (h CoursesHandler) ListCourses(w http.ResponseWriter, r *http.Request) {
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-	defer cancel()
 
-	courses, err := h.Queries.ListCourses(ctx)
+	courses, err := h.Queries.ListCourses(r.Context())
 	if err != nil {
 		log.Printf("failed to list courses: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
@@ -90,10 +87,7 @@ func (h CoursesHandler) GetCourseByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-	defer cancel()
-
-	course, err := h.Queries.GetCourseByID(ctx, id)
+	course, err := h.Queries.GetCourseByID(r.Context(), id)
 	if errors.Is(err, sql.ErrNoRows) {
 		http.Error(w, "Course not found", http.StatusNotFound)
 		return
@@ -120,10 +114,8 @@ func (h CoursesHandler) GetCourseByID(w http.ResponseWriter, r *http.Request) {
 // @Failure     500  {string} string "Internal server error"
 // @Router      /courses/name/{name} [get]
 func (h CoursesHandler) GetCourseByName(w http.ResponseWriter, r *http.Request) {
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-	defer cancel()
 
-	course, err := h.Queries.GetCourseByName(ctx, chi.URLParam(r, "name"))
+	course, err := h.Queries.GetCourseByName(r.Context(), chi.URLParam(r, "name"))
 	if errors.Is(err, sql.ErrNoRows) {
 		http.Error(w, "Course not found", http.StatusNotFound)
 		return
@@ -161,15 +153,12 @@ func (h CoursesHandler) CreateCourse(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-	defer cancel()
-
 	params := db.CreateCourseParams{Name: req.Name}
 	if req.GolfAPIID != nil {
 		params.GolfApiID = sql.NullString{String: *req.GolfAPIID, Valid: true}
 	}
 
-	result, err := h.Queries.CreateCourse(ctx, params)
+	result, err := h.Queries.CreateCourse(r.Context(), params)
 	if err != nil {
 		log.Printf("failed to create course: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
@@ -183,7 +172,7 @@ func (h CoursesHandler) CreateCourse(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	course, err := h.Queries.GetCourseByID(ctx, id)
+	course, err := h.Queries.GetCourseByID(r.Context(), id)
 	if err != nil {
 		log.Printf("failed to fetch created course: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
@@ -218,15 +207,12 @@ func (h CoursesHandler) UpdateCourse(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-	defer cancel()
-
 	params := db.UpdateCourseParams{Name: req.Name, ID: id}
 	if req.GolfAPIID != nil {
 		params.GolfApiID = sql.NullString{String: *req.GolfAPIID, Valid: true}
 	}
 
-	if err = h.Queries.UpdateCourse(ctx, params); err != nil {
+	if err = h.Queries.UpdateCourse(r.Context(), params); err != nil {
 		log.Printf("failed to update course: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
@@ -250,10 +236,7 @@ func (h CoursesHandler) DeleteCourse(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-	defer cancel()
-
-	if err = h.Queries.DeleteCourse(ctx, id); err != nil {
+	if err = h.Queries.DeleteCourse(r.Context(), id); err != nil {
 		log.Printf("failed to delete course: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return

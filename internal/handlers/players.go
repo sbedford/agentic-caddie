@@ -7,9 +7,6 @@ import (
 	"log"
 	"net/http"
 	"strconv"
-	"time"
-
-	"context"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/sbedford/agentic-caddie/internal/db"
@@ -42,10 +39,8 @@ type updateHandicapRequest struct {
 // @Failure     500 {string} string "Internal server error"
 // @Router      /players [get]
 func (b PlayersHandler) ListPlayers(w http.ResponseWriter, r *http.Request) {
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-	defer cancel()
 
-	players, err := b.Queries.ListPlayers(ctx)
+	players, err := b.Queries.ListPlayers(r.Context())
 	if err != nil {
 		log.Printf("failed to list players: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
@@ -84,10 +79,7 @@ func (b PlayersHandler) GetPlayer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-	defer cancel()
-
-	player, err := b.Queries.GetPlayerByID(ctx, id)
+	player, err := b.Queries.GetPlayerByID(r.Context(), id)
 	if errors.Is(err, sql.ErrNoRows) {
 		http.Error(w, "Player not found", http.StatusNotFound)
 		return
@@ -114,10 +106,8 @@ func (b PlayersHandler) GetPlayer(w http.ResponseWriter, r *http.Request) {
 // @Failure     500  {string} string "Internal server error"
 // @Router      /players/name/{name} [get]
 func (b PlayersHandler) GetPlayerByName(w http.ResponseWriter, r *http.Request) {
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-	defer cancel()
 
-	player, err := b.Queries.GetPlayerByName(ctx, chi.URLParam(r, "name"))
+	player, err := b.Queries.GetPlayerByName(r.Context(), chi.URLParam(r, "name"))
 	if errors.Is(err, sql.ErrNoRows) {
 		http.Error(w, "Player not found", http.StatusNotFound)
 		return
@@ -155,10 +145,7 @@ func (b PlayersHandler) CreatePlayer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-	defer cancel()
-
-	result, err := b.Queries.CreatePlayer(ctx, db.CreatePlayerParams{
+	result, err := b.Queries.CreatePlayer(r.Context(), db.CreatePlayerParams{
 		Name:     req.Name,
 		Handicap: sql.NullFloat64{Float64: req.Handicap, Valid: true},
 	})
@@ -175,7 +162,7 @@ func (b PlayersHandler) CreatePlayer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	player, err := b.Queries.GetPlayerByID(ctx, id)
+	player, err := b.Queries.GetPlayerByID(r.Context(), id)
 	if err != nil {
 		log.Printf("failed to get created player: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
@@ -214,10 +201,7 @@ func (b PlayersHandler) UpdateHandicap(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-	defer cancel()
-
-	err = b.Queries.UpdatePlayerHandicap(ctx, db.UpdatePlayerHandicapParams{
+	err = b.Queries.UpdatePlayerHandicap(r.Context(), db.UpdatePlayerHandicapParams{
 		ID:       id,
 		Handicap: sql.NullFloat64{Float64: req.Handicap, Valid: true},
 	})
@@ -245,10 +229,7 @@ func (b PlayersHandler) DeletePlayer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-	defer cancel()
-
-	if err = b.Queries.DeletePlayer(ctx, id); err != nil {
+	if err = b.Queries.DeletePlayer(r.Context(), id); err != nil {
 		log.Printf("failed to delete player by id: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return

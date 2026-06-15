@@ -1,14 +1,12 @@
 package handlers
 
 import (
-	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
 	"log"
 	"net/http"
 	"strconv"
-	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/sbedford/agentic-caddie/internal/db"
@@ -81,10 +79,7 @@ func (h POIsHandler) ListPOIsByHole(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-	defer cancel()
-
-	pois, err := h.Queries.ListPOIsByHole(ctx, courseHoleID)
+	pois, err := h.Queries.ListPOIsByHole(r.Context(), courseHoleID)
 	if err != nil {
 		log.Printf("failed to list POIs: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
@@ -119,10 +114,7 @@ func (h POIsHandler) ListPOIsByHoleAndTee(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-	defer cancel()
-
-	pois, err := h.Queries.ListPOIsByHoleAndTee(ctx, db.ListPOIsByHoleAndTeeParams{
+	pois, err := h.Queries.ListPOIsByHoleAndTee(r.Context(), db.ListPOIsByHoleAndTeeParams{
 		CourseHoleID: courseHoleID,
 		SpecificTee:  sql.NullString{String: chi.URLParam(r, "tee"), Valid: true},
 	})
@@ -160,10 +152,7 @@ func (h POIsHandler) GetPOIByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-	defer cancel()
-
-	poi, err := h.Queries.GetPOIByID(ctx, id)
+	poi, err := h.Queries.GetPOIByID(r.Context(), id)
 	if errors.Is(err, sql.ErrNoRows) {
 		http.Error(w, "POI not found", http.StatusNotFound)
 		return
@@ -201,12 +190,15 @@ func (h POIsHandler) CreatePOI(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-	defer cancel()
-
-	if !checkVocab(w, ctx, h.Queries, "poi_type", req.PoiType) { return }
-	if !checkOptVocab(w, ctx, h.Queries, "poi_side", req.Side) { return }
-	if !checkOptVocab(w, ctx, h.Queries, "reference_point", req.ReferencePoint) { return }
+	if !checkVocab(w, r.Context(), h.Queries, "poi_type", req.PoiType) {
+		return
+	}
+	if !checkOptVocab(w, r.Context(), h.Queries, "poi_side", req.Side) {
+		return
+	}
+	if !checkOptVocab(w, r.Context(), h.Queries, "reference_point", req.ReferencePoint) {
+		return
+	}
 
 	params := db.CreatePOIParams{
 		CourseHoleID: req.CourseHoleID,
@@ -229,7 +221,7 @@ func (h POIsHandler) CreatePOI(w http.ResponseWriter, r *http.Request) {
 		params.DistanceEnd = sql.NullFloat64{Float64: *req.DistanceEnd, Valid: true}
 	}
 
-	result, err := h.Queries.CreatePOI(ctx, params)
+	result, err := h.Queries.CreatePOI(r.Context(), params)
 	if err != nil {
 		log.Printf("failed to create POI: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
@@ -243,7 +235,7 @@ func (h POIsHandler) CreatePOI(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	poi, err := h.Queries.GetPOIByID(ctx, id)
+	poi, err := h.Queries.GetPOIByID(r.Context(), id)
 	if err != nil {
 		log.Printf("failed to fetch created POI: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
@@ -278,12 +270,15 @@ func (h POIsHandler) UpdatePOI(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-	defer cancel()
-
-	if !checkVocab(w, ctx, h.Queries, "poi_type", req.PoiType) { return }
-	if !checkOptVocab(w, ctx, h.Queries, "poi_side", req.Side) { return }
-	if !checkOptVocab(w, ctx, h.Queries, "reference_point", req.ReferencePoint) { return }
+	if !checkVocab(w, r.Context(), h.Queries, "poi_type", req.PoiType) {
+		return
+	}
+	if !checkOptVocab(w, r.Context(), h.Queries, "poi_side", req.Side) {
+		return
+	}
+	if !checkOptVocab(w, r.Context(), h.Queries, "reference_point", req.ReferencePoint) {
+		return
+	}
 
 	params := db.UpdatePOIParams{ID: id, PoiType: req.PoiType, Label: req.Label}
 	if req.SpecificTee != nil {
@@ -302,7 +297,7 @@ func (h POIsHandler) UpdatePOI(w http.ResponseWriter, r *http.Request) {
 		params.DistanceEnd = sql.NullFloat64{Float64: *req.DistanceEnd, Valid: true}
 	}
 
-	if err = h.Queries.UpdatePOI(ctx, params); err != nil {
+	if err = h.Queries.UpdatePOI(r.Context(), params); err != nil {
 		log.Printf("failed to update POI: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
@@ -326,10 +321,7 @@ func (h POIsHandler) DeletePOI(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-	defer cancel()
-
-	if err = h.Queries.DeletePOI(ctx, id); err != nil {
+	if err = h.Queries.DeletePOI(r.Context(), id); err != nil {
 		log.Printf("failed to delete POI: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
@@ -353,10 +345,7 @@ func (h POIsHandler) DeletePOIsByHole(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-	defer cancel()
-
-	if err = h.Queries.DeletePOIsByHole(ctx, courseHoleID); err != nil {
+	if err = h.Queries.DeletePOIsByHole(r.Context(), courseHoleID); err != nil {
 		log.Printf("failed to delete POIs by hole: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
