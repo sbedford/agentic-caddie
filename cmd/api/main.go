@@ -13,9 +13,9 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	handlers "github.com/sbedford/agentic-caddie/internal/api_handlers"
 	"github.com/sbedford/agentic-caddie/internal/config"
 	"github.com/sbedford/agentic-caddie/internal/db"
-	"github.com/sbedford/agentic-caddie/internal/handlers"
 	httpSwagger "github.com/swaggo/http-swagger"
 
 	_ "github.com/sbedford/agentic-caddie/cmd/api/docs"

@@ -10,6 +10,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/sbedford/agentic-caddie/internal/db"
+	"github.com/sbedford/agentic-caddie/internal/helpers"
 )
 
 type TeeHolesHandler struct {
@@ -51,10 +52,10 @@ func toTeeHoleResponse(th db.TeeHole) teeHoleResponse {
 		CourseHoleID: th.CourseHoleID,
 		TeeID:        th.TeeID,
 		Par:          th.Par,
-		StrokeIndex:  nullableInt64(th.StrokeIndex),
+		StrokeIndex:  helpers.NullableInt64(th.StrokeIndex),
 		Distance:     th.Distance,
-		TeeCentreLat: nullableFloat64(th.TeeCentreLat),
-		TeeCentreLng: nullableFloat64(th.TeeCentreLng),
+		TeeCentreLat: helpers.NullableFloat64(th.TeeCentreLat),
+		TeeCentreLng: helpers.NullableFloat64(th.TeeCentreLng),
 	}
 }
 

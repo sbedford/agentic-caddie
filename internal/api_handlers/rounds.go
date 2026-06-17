@@ -11,6 +11,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/sbedford/agentic-caddie/internal/db"
+	"github.com/sbedford/agentic-caddie/internal/helpers"
 )
 
 type RoundsHandler struct {
@@ -51,10 +52,10 @@ func toRoundResponse(r db.Round) roundResponse {
 		Tees:            r.Tees,
 		DailyHandicap:   r.DailyHandicap,
 		RoundType:       r.RoundType,
-		CompetitionType: nullableString(r.CompetitionType),
-		TotalScore:      nullableInt64(r.TotalScore),
-		TotalPoints:     nullableInt64(r.TotalPoints),
-		TotalPutts:      nullableInt64(r.TotalPutts),
+		CompetitionType: helpers.NullableString(r.CompetitionType),
+		TotalScore:      helpers.NullableInt64(r.TotalScore),
+		TotalPoints:     helpers.NullableInt64(r.TotalPoints),
+		TotalPutts:      helpers.NullableInt64(r.TotalPutts),
 		CreatedAt:       r.CreatedAt,
 	}
 }
@@ -272,10 +273,10 @@ func (h RoundsHandler) CreateRound(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !checkVocab(w, r.Context(), h.Queries, "round_type", req.RoundType) {
+	if !helpers.CheckVocab(w, r.Context(), h.Queries, "round_type", req.RoundType) {
 		return
 	}
-	if req.CompetitionType != "" && !checkVocab(w, r.Context(), h.Queries, "competition_type", req.CompetitionType) {
+	if req.CompetitionType != "" && !helpers.CheckVocab(w, r.Context(), h.Queries, "competition_type", req.CompetitionType) {
 		return
 	}
 

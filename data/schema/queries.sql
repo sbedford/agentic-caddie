@@ -193,6 +193,15 @@ FROM tee_holes
 WHERE course_hole_id = ?
   AND tee_id         = ?;
 
+-- name: GetTeeHoleByCourseIdAndHoleAndTeeName :one
+SELECT th.course_hole_id, t.name as tee, th.par, th.stroke_index, th.distance
+FROM tee_holes th
+INNER JOIN course_holes ch ON ch.id=th.course_hole_id and ch.hole_number=sqlc.arg(HoleNumber)
+INNER JOIN tees t ON th.tee_Id = t.id AND t.name = sqlc.arg(TeeName)
+INNER JOIN courses c ON c.id=t.course_id and  t.course_id=c.Id AND c.id=sqlc.arg(CourseId);
+
+--CourseId TeeName HoleNumber
+
 -- name: CreateTeeHole :execresult
 INSERT INTO tee_holes (
     course_hole_id, tee_id, par, stroke_index,
@@ -452,20 +461,20 @@ WHERE id = ?;
 
 -- name: ListHolesByRound :many
 SELECT id, round_id, course_hole_id, hole_number, flag_position,
-       score, points, putts, gir, scramble_save, penalty
+       score, points, putts,fairway_hit,  gir,  scramble_save, penalty
 FROM holes
 WHERE round_id = ?
 ORDER BY hole_number;
 
 -- name: GetHoleByID :one
 SELECT id, round_id, course_hole_id, hole_number, flag_position,
-       score, points, putts, gir, scramble_save, penalty
+       score, points, putts,fairway_hit,  gir, scramble_save, penalty
 FROM holes
 WHERE id = ?;
 
 -- name: GetHoleByRoundAndNumber :one
 SELECT id, round_id, course_hole_id, hole_number, flag_position,
-       score, points, putts, gir, scramble_save, penalty
+       score, points, putts, fairway_hit,  gir, scramble_save, penalty
 FROM holes
 WHERE round_id    = ?
   AND hole_number = ?;

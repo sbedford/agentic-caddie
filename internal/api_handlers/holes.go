@@ -10,6 +10,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/sbedford/agentic-caddie/internal/db"
+	"github.com/sbedford/agentic-caddie/internal/helpers"
 )
 
 type HolesHandler struct {
@@ -59,13 +60,13 @@ func toHoleResponse(h db.Hole) holeResponse {
 		RoundID:      h.RoundID,
 		CourseHoleID: h.CourseHoleID,
 		HoleNumber:   h.HoleNumber,
-		FlagPosition: nullableString(h.FlagPosition),
-		Score:        nullableInt64(h.Score),
-		Points:       nullableInt64(h.Points),
-		Putts:        nullableInt64(h.Putts),
-		GIR:          nullableBool(h.Gir),
-		ScrambleSave: nullableBool(h.ScrambleSave),
-		Penalty:      nullableBool(h.Penalty),
+		FlagPosition: helpers.NullableString(h.FlagPosition),
+		Score:        helpers.NullableInt64(h.Score),
+		Points:       helpers.NullableInt64(h.Points),
+		Putts:        helpers.NullableInt64(h.Putts),
+		GIR:          helpers.NullableBool(h.Gir),
+		ScrambleSave: helpers.NullableBool(h.ScrambleSave),
+		Penalty:      helpers.NullableBool(h.Penalty),
 	}
 }
 
@@ -201,7 +202,7 @@ func (h HolesHandler) CreateHole(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !checkOptVocab(w, r.Context(), h.Queries, "flag_position", req.FlagPosition) {
+	if !helpers.CheckOptVocab(w, r.Context(), h.Queries, "flag_position", req.FlagPosition) {
 		return
 	}
 
@@ -281,7 +282,7 @@ func (h HolesHandler) UpdateHole(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !checkOptVocab(w, r.Context(), h.Queries, "flag_position", req.FlagPosition) {
+	if !helpers.CheckOptVocab(w, r.Context(), h.Queries, "flag_position", req.FlagPosition) {
 		return
 	}
 

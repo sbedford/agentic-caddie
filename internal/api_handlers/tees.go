@@ -10,6 +10,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/sbedford/agentic-caddie/internal/db"
+	"github.com/sbedford/agentic-caddie/internal/helpers"
 )
 
 type TeesHandler struct {
@@ -41,8 +42,8 @@ func toTeeResponse(t db.Tee) teeResponse {
 		ID:           t.ID,
 		CourseID:     t.CourseID,
 		Name:         t.Name,
-		SlopeRating:  nullableInt64(t.SlopeRating),
-		CourseRating: nullableFloat64(t.CourseRating),
+		SlopeRating:  helpers.NullableInt64(t.SlopeRating),
+		CourseRating: helpers.NullableFloat64(t.CourseRating),
 	}
 }
 

@@ -10,6 +10,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/sbedford/agentic-caddie/internal/db"
+	"github.com/sbedford/agentic-caddie/internal/helpers"
 )
 
 type CourseHolesHandler struct {
@@ -41,8 +42,8 @@ func toCourseHoleResponse(ch db.CourseHole) courseHoleResponse {
 		ID:             ch.ID,
 		CourseID:       ch.CourseID,
 		HoleNumber:     ch.HoleNumber,
-		GreenCentreLat: nullableFloat64(ch.GreenCentreLat),
-		GreenCentreLng: nullableFloat64(ch.GreenCentreLng),
+		GreenCentreLat: helpers.NullableFloat64(ch.GreenCentreLat),
+		GreenCentreLng: helpers.NullableFloat64(ch.GreenCentreLng),
 	}
 }
 

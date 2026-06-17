@@ -272,6 +272,7 @@ func (q *Queries) CreateTee(ctx context.Context, arg CreateTeeParams) (sql.Resul
 }
 
 const createTeeHole = `-- name: CreateTeeHole :execresult
+
 INSERT INTO tee_holes (
     course_hole_id, tee_id, par, stroke_index,
     distance, tee_centre_lat, tee_centre_lng
@@ -289,6 +290,7 @@ type CreateTeeHoleParams struct {
 	TeeCentreLng sql.NullFloat64
 }
 
+// CourseId TeeName HoleNumber
 func (q *Queries) CreateTeeHole(ctx context.Context, arg CreateTeeHoleParams) (sql.Result, error) {
 	return q.db.ExecContext(ctx, createTeeHole,
 		arg.CourseHoleID,
@@ -721,28 +723,14 @@ func (q *Queries) GetCourseHoleByID(ctx context.Context, id int64) (CourseHole, 
 
 const getHoleByID = `-- name: GetHoleByID :one
 SELECT id, round_id, course_hole_id, hole_number, flag_position,
-       score, points, putts, gir, scramble_save, penalty
+       score, points, putts,fairway_hit,  gir, scramble_save, penalty
 FROM holes
 WHERE id = ?
 `
 
-type GetHoleByIDRow struct {
-	ID           int64
-	RoundID      int64
-	CourseHoleID int64
-	HoleNumber   int64
-	FlagPosition sql.NullString
-	Score        sql.NullInt64
-	Points       sql.NullInt64
-	Putts        sql.NullInt64
-	Gir          sql.NullBool
-	ScrambleSave sql.NullBool
-	Penalty      sql.NullBool
-}
-
-func (q *Queries) GetHoleByID(ctx context.Context, id int64) (GetHoleByIDRow, error) {
+func (q *Queries) GetHoleByID(ctx context.Context, id int64) (Hole, error) {
 	row := q.db.QueryRowContext(ctx, getHoleByID, id)
-	var i GetHoleByIDRow
+	var i Hole
 	err := row.Scan(
 		&i.ID,
 		&i.RoundID,
@@ -752,6 +740,7 @@ func (q *Queries) GetHoleByID(ctx context.Context, id int64) (GetHoleByIDRow, er
 		&i.Score,
 		&i.Points,
 		&i.Putts,
+		&i.FairwayHit,
 		&i.Gir,
 		&i.ScrambleSave,
 		&i.Penalty,
@@ -761,7 +750,7 @@ func (q *Queries) GetHoleByID(ctx context.Context, id int64) (GetHoleByIDRow, er
 
 const getHoleByRoundAndNumber = `-- name: GetHoleByRoundAndNumber :one
 SELECT id, round_id, course_hole_id, hole_number, flag_position,
-       score, points, putts, gir, scramble_save, penalty
+       score, points, putts, fairway_hit,  gir, scramble_save, penalty
 FROM holes
 WHERE round_id    = ?
   AND hole_number = ?
@@ -772,23 +761,9 @@ type GetHoleByRoundAndNumberParams struct {
 	HoleNumber int64
 }
 
-type GetHoleByRoundAndNumberRow struct {
-	ID           int64
-	RoundID      int64
-	CourseHoleID int64
-	HoleNumber   int64
-	FlagPosition sql.NullString
-	Score        sql.NullInt64
-	Points       sql.NullInt64
-	Putts        sql.NullInt64
-	Gir          sql.NullBool
-	ScrambleSave sql.NullBool
-	Penalty      sql.NullBool
-}
-
-func (q *Queries) GetHoleByRoundAndNumber(ctx context.Context, arg GetHoleByRoundAndNumberParams) (GetHoleByRoundAndNumberRow, error) {
+func (q *Queries) GetHoleByRoundAndNumber(ctx context.Context, arg GetHoleByRoundAndNumberParams) (Hole, error) {
 	row := q.db.QueryRowContext(ctx, getHoleByRoundAndNumber, arg.RoundID, arg.HoleNumber)
-	var i GetHoleByRoundAndNumberRow
+	var i Hole
 	err := row.Scan(
 		&i.ID,
 		&i.RoundID,
@@ -798,6 +773,7 @@ func (q *Queries) GetHoleByRoundAndNumber(ctx context.Context, arg GetHoleByRoun
 		&i.Score,
 		&i.Points,
 		&i.Putts,
+		&i.FairwayHit,
 		&i.Gir,
 		&i.ScrambleSave,
 		&i.Penalty,
@@ -1107,6 +1083,41 @@ func (q *Queries) GetTeeByID(ctx context.Context, id int64) (Tee, error) {
 		&i.Name,
 		&i.SlopeRating,
 		&i.CourseRating,
+	)
+	return i, err
+}
+
+const getTeeHoleByCourseIdAndHoleAndTeeName = `-- name: GetTeeHoleByCourseIdAndHoleAndTeeName :one
+SELECT th.course_hole_id, t.name as tee, th.par, th.stroke_index, th.distance
+FROM tee_holes th
+INNER JOIN course_holes ch ON ch.id=th.course_hole_id and ch.hole_number=?1
+INNER JOIN tees t ON th.tee_Id = t.id AND t.name = ?2
+INNER JOIN courses c ON c.id=t.course_id and  t.course_id=c.Id AND c.id=?3
+`
+
+type GetTeeHoleByCourseIdAndHoleAndTeeNameParams struct {
+	Holenumber int64
+	Teename    string
+	Courseid   int64
+}
+
+type GetTeeHoleByCourseIdAndHoleAndTeeNameRow struct {
+	CourseHoleID int64
+	Tee          string
+	Par          int64
+	StrokeIndex  sql.NullInt64
+	Distance     int64
+}
+
+func (q *Queries) GetTeeHoleByCourseIdAndHoleAndTeeName(ctx context.Context, arg GetTeeHoleByCourseIdAndHoleAndTeeNameParams) (GetTeeHoleByCourseIdAndHoleAndTeeNameRow, error) {
+	row := q.db.QueryRowContext(ctx, getTeeHoleByCourseIdAndHoleAndTeeName, arg.Holenumber, arg.Teename, arg.Courseid)
+	var i GetTeeHoleByCourseIdAndHoleAndTeeNameRow
+	err := row.Scan(
+		&i.CourseHoleID,
+		&i.Tee,
+		&i.Par,
+		&i.StrokeIndex,
+		&i.Distance,
 	)
 	return i, err
 }
@@ -1490,39 +1501,25 @@ func (q *Queries) ListCourses(ctx context.Context) ([]Course, error) {
 const listHolesByRound = `-- name: ListHolesByRound :many
 
 SELECT id, round_id, course_hole_id, hole_number, flag_position,
-       score, points, putts, gir, scramble_save, penalty
+       score, points, putts,fairway_hit,  gir,  scramble_save, penalty
 FROM holes
 WHERE round_id = ?
 ORDER BY hole_number
 `
 
-type ListHolesByRoundRow struct {
-	ID           int64
-	RoundID      int64
-	CourseHoleID int64
-	HoleNumber   int64
-	FlagPosition sql.NullString
-	Score        sql.NullInt64
-	Points       sql.NullInt64
-	Putts        sql.NullInt64
-	Gir          sql.NullBool
-	ScrambleSave sql.NullBool
-	Penalty      sql.NullBool
-}
-
 // ============================================================
 // HOLES
 // Unique constraint: (round_id, hole_number)
 // ============================================================
-func (q *Queries) ListHolesByRound(ctx context.Context, roundID int64) ([]ListHolesByRoundRow, error) {
+func (q *Queries) ListHolesByRound(ctx context.Context, roundID int64) ([]Hole, error) {
 	rows, err := q.db.QueryContext(ctx, listHolesByRound, roundID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []ListHolesByRoundRow
+	var items []Hole
 	for rows.Next() {
-		var i ListHolesByRoundRow
+		var i Hole
 		if err := rows.Scan(
 			&i.ID,
 			&i.RoundID,
@@ -1532,6 +1529,7 @@ func (q *Queries) ListHolesByRound(ctx context.Context, roundID int64) ([]ListHo
 			&i.Score,
 			&i.Points,
 			&i.Putts,
+			&i.FairwayHit,
 			&i.Gir,
 			&i.ScrambleSave,
 			&i.Penalty,

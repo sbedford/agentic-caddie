@@ -10,6 +10,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/sbedford/agentic-caddie/internal/db"
+	"github.com/sbedford/agentic-caddie/internal/helpers"
 )
 
 type POIsHandler struct {
@@ -53,12 +54,12 @@ func toPOIResponse(p db.HolePointsOfInterest) poiResponse {
 	return poiResponse{
 		ID:             p.ID,
 		CourseHoleID:   p.CourseHoleID,
-		SpecificTee:    nullableString(p.SpecificTee),
+		SpecificTee:    helpers.NullableString(p.SpecificTee),
 		PoiType:        p.PoiType,
-		Side:           nullableString(p.Side),
-		ReferencePoint: nullableString(p.ReferencePoint),
-		DistanceStart:  nullableFloat64(p.DistanceStart),
-		DistanceEnd:    nullableFloat64(p.DistanceEnd),
+		Side:           helpers.NullableString(p.Side),
+		ReferencePoint: helpers.NullableString(p.ReferencePoint),
+		DistanceStart:  helpers.NullableFloat64(p.DistanceStart),
+		DistanceEnd:    helpers.NullableFloat64(p.DistanceEnd),
 		Label:          p.Label,
 	}
 }
@@ -190,13 +191,13 @@ func (h POIsHandler) CreatePOI(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !checkVocab(w, r.Context(), h.Queries, "poi_type", req.PoiType) {
+	if !helpers.CheckVocab(w, r.Context(), h.Queries, "poi_type", req.PoiType) {
 		return
 	}
-	if !checkOptVocab(w, r.Context(), h.Queries, "poi_side", req.Side) {
+	if !helpers.CheckOptVocab(w, r.Context(), h.Queries, "poi_side", req.Side) {
 		return
 	}
-	if !checkOptVocab(w, r.Context(), h.Queries, "reference_point", req.ReferencePoint) {
+	if !helpers.CheckOptVocab(w, r.Context(), h.Queries, "reference_point", req.ReferencePoint) {
 		return
 	}
 
@@ -270,13 +271,13 @@ func (h POIsHandler) UpdatePOI(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !checkVocab(w, r.Context(), h.Queries, "poi_type", req.PoiType) {
+	if !helpers.CheckVocab(w, r.Context(), h.Queries, "poi_type", req.PoiType) {
 		return
 	}
-	if !checkOptVocab(w, r.Context(), h.Queries, "poi_side", req.Side) {
+	if !helpers.CheckOptVocab(w, r.Context(), h.Queries, "poi_side", req.Side) {
 		return
 	}
-	if !checkOptVocab(w, r.Context(), h.Queries, "reference_point", req.ReferencePoint) {
+	if !helpers.CheckOptVocab(w, r.Context(), h.Queries, "reference_point", req.ReferencePoint) {
 		return
 	}
 

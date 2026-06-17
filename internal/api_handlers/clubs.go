@@ -11,6 +11,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/sbedford/agentic-caddie/internal/db"
+	"github.com/sbedford/agentic-caddie/internal/helpers"
 )
 
 type ClubsHandler struct {
@@ -63,14 +64,14 @@ func toClubResponse(c db.PlayerClub) clubResponse {
 		PlayerID:       c.PlayerID,
 		ClubName:       c.ClubName,
 		AddedDate:      c.AddedDate,
-		RemovedDate:    nullableTime(c.RemovedDate),
-		CarryAvg:       nullableFloat64(c.CarryAvg),
-		CarryReliable:  nullableFloat64(c.CarryReliable),
-		CarryMax:       nullableFloat64(c.CarryMax),
-		DispersionAvgM: nullableFloat64(c.DispersionAvgM),
-		DispersionBias: nullableString(c.DispersionBias),
+		RemovedDate:    helpers.NullableTime(c.RemovedDate),
+		CarryAvg:       helpers.NullableFloat64(c.CarryAvg),
+		CarryReliable:  helpers.NullableFloat64(c.CarryReliable),
+		CarryMax:       helpers.NullableFloat64(c.CarryMax),
+		DispersionAvgM: helpers.NullableFloat64(c.DispersionAvgM),
+		DispersionBias: helpers.NullableString(c.DispersionBias),
 		SampleSize:     c.SampleSize,
-		CalculatedAt:   nullableTime(c.CalculatedAt),
+		CalculatedAt:   helpers.NullableTime(c.CalculatedAt),
 	}
 }
 
@@ -286,7 +287,7 @@ func (h ClubsHandler) CreateClub(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !checkOptVocab(w, r.Context(), h.Queries, "dispersion_bias", req.DispersionBias) {
+	if !helpers.CheckOptVocab(w, r.Context(), h.Queries, "dispersion_bias", req.DispersionBias) {
 		return
 	}
 
@@ -404,7 +405,7 @@ func (h ClubsHandler) UpdateClubDistances(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	if !checkOptVocab(w, r.Context(), h.Queries, "dispersion_bias", req.DispersionBias) {
+	if !helpers.CheckOptVocab(w, r.Context(), h.Queries, "dispersion_bias", req.DispersionBias) {
 		return
 	}
 

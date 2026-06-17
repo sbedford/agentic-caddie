@@ -9,8 +9,6 @@ import (
 	"github.com/sbedford/agentic-caddie/internal/db"
 )
 
-// --- Tool definition (sent to the model on every call) ---
-
 var GetHoleStatsToolDef = anthropic.ToolUnionParam{
 	OfTool: &anthropic.ToolParam{
 		Name:        "get_hole_stats",
@@ -18,7 +16,7 @@ var GetHoleStatsToolDef = anthropic.ToolUnionParam{
 		InputSchema: anthropic.ToolInputSchemaParam{
 			Properties: map[string]any{
 				"course_id": map[string]any{
-					"type":        "string",
+					"type":        "integer",
 					"description": "The course identifier, as returned by get_round_history or get_course_info.",
 				},
 				"tee": map[string]any{
@@ -30,7 +28,7 @@ var GetHoleStatsToolDef = anthropic.ToolUnionParam{
 					"description": "Hole number, 1-18.",
 				},
 			},
-			Required: []string{"course_id", "hole_num"},
+			Required: []string{"course_id", "tee", "hole_num"},
 		},
 	},
 }
@@ -44,7 +42,7 @@ type getHoleStatsInput struct {
 }
 
 type holeStatsHandler struct {
-	queries *db.Queries // sqlc-generated
+	queries *db.Queries
 }
 
 // type ToolHandler func(ctx context.Context, input json.RawMessage) (string, error)

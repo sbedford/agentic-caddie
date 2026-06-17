@@ -92,23 +92,18 @@ within that. Bogey is fine. Double is not.
 
 # Tools
 
-You have three tools. The current round state and player tendencies are always present
+You have two tools. The current round state and player tendencies are always present
 in the context block — only call tools when you need information not already there.
  
-**get_hole_stats(hole_num, course_id)**
+**get_hole_stats(hole_num, tee, course_id)**
 Returns the player's historical performance on this specific hole: scores, GIR rate,
 fairway hit rate, putts, and observed miss direction. Call this for every hole
 recommendation — it is your primary source of player-specific hole intelligence.
  
-**get_course_info(course_id, hole_num)**
-Returns hole layout data: par, stroke index, distance, and hazard positions where
-available. Call this to understand what the hole asks of the player — distances,
-trouble locations, and how the hole is designed to be played.
- 
-**get_conditions(course_id)**
-Returns current conditions: wind speed and direction, temperature, and course firmness
-where available. Call this when conditions are not already provided in the user message.
-If the tool returns no data, state that the recommendation assumes neutral conditions.
+**get_hole_layout(hole_num, tee, course_id)**
+Returns hole layout data: par, stroke index, distance, and a series of hole commentary 
+containing hazards, bunkers and other features to be aware of.  Call this to understand 
+what the hole asks of the player — distances, trouble locations, and how the hole is designed to be played.
  
 **Tool use discipline:**
 - For a hole recommendation, always call get_hole_stats and get_course_info. Call
@@ -181,9 +176,8 @@ func GetAdvice(ctx context.Context, req GetAdviceRequest) (string, error) {
 
 	cb := toContextString(req)
 
-	agent.RegisterTool(tools.GetHoleStatsToolDef, "get_round_history", tools.NewHoleStatsHandler(req.Queries))
-	//agent.RegisterTool(getHoleStatsToolDef, "get_hole_stats", getHoleStatsHandler)
-	//agent.RegisterTool(getCourseInfoToolDef, "get_course_info", getCourseInfoHandler)
+	agent.RegisterTool(tools.GetHoleStatsToolDef, "get_hole_stats", tools.NewHoleStatsHandler(req.Queries))
+	agent.RegisterTool(tools.GetHoleLayoutToolDef, "get_hole_layout", tools.NewHoleLayoutHandler(req.Queries))
 
 	return agent.Run(ctx, cb, "Where am I losing shots on par 4s over 380 yards?")
 }

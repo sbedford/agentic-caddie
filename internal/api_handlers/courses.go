@@ -11,6 +11,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/sbedford/agentic-caddie/internal/db"
+	"github.com/sbedford/agentic-caddie/internal/helpers"
 )
 
 type CoursesHandler struct {
@@ -38,7 +39,7 @@ func toCourseResponse(c db.Course) courseResponse {
 	return courseResponse{
 		ID:        c.ID,
 		Name:      c.Name,
-		GolfAPIID: nullableString(c.GolfApiID),
+		GolfAPIID: helpers.NullableString(c.GolfApiID),
 		CreatedAt: c.CreatedAt,
 	}
 }

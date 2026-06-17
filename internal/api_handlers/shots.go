@@ -10,6 +10,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/sbedford/agentic-caddie/internal/db"
+	"github.com/sbedford/agentic-caddie/internal/helpers"
 )
 
 type ShotsHandler struct {
@@ -59,10 +60,10 @@ func toShotResponse(s db.Shot) shotResponse {
 		HoleID:        s.HoleID,
 		ShotNumber:    s.ShotNumber,
 		ShotType:      s.ShotType,
-		Club:          nullableString(s.Club),
-		Result:        nullableString(s.Result),
-		Miss:          nullableString(s.Miss),
-		StrikeQuality: nullableString(s.StrikeQuality),
+		Club:          helpers.NullableString(s.Club),
+		Result:        helpers.NullableString(s.Result),
+		Miss:          helpers.NullableString(s.Miss),
+		StrikeQuality: helpers.NullableString(s.StrikeQuality),
 		Source:        s.Source,
 	}
 }
@@ -240,19 +241,19 @@ func (h ShotsHandler) CreateShot(w http.ResponseWriter, r *http.Request) {
 		req.Source = "manual"
 	}
 
-	if !checkVocab(w, r.Context(), h.Queries, "shot_type", req.ShotType) {
+	if !helpers.CheckVocab(w, r.Context(), h.Queries, "shot_type", req.ShotType) {
 		return
 	}
-	if !checkVocab(w, r.Context(), h.Queries, "shot_source", req.Source) {
+	if !helpers.CheckVocab(w, r.Context(), h.Queries, "shot_source", req.Source) {
 		return
 	}
-	if !checkOptVocab(w, r.Context(), h.Queries, "shot_result", req.Result) {
+	if !helpers.CheckOptVocab(w, r.Context(), h.Queries, "shot_result", req.Result) {
 		return
 	}
-	if !checkOptVocab(w, r.Context(), h.Queries, "shot_miss", req.Miss) {
+	if !helpers.CheckOptVocab(w, r.Context(), h.Queries, "shot_miss", req.Miss) {
 		return
 	}
-	if !checkOptVocab(w, r.Context(), h.Queries, "shot_strike", req.StrikeQuality) {
+	if !helpers.CheckOptVocab(w, r.Context(), h.Queries, "shot_strike", req.StrikeQuality) {
 		return
 	}
 
@@ -324,19 +325,19 @@ func (h ShotsHandler) UpdateShot(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !checkVocab(w, r.Context(), h.Queries, "shot_type", req.ShotType) {
+	if !helpers.CheckVocab(w, r.Context(), h.Queries, "shot_type", req.ShotType) {
 		return
 	}
-	if !checkVocab(w, r.Context(), h.Queries, "shot_source", req.Source) {
+	if !helpers.CheckVocab(w, r.Context(), h.Queries, "shot_source", req.Source) {
 		return
 	}
-	if !checkOptVocab(w, r.Context(), h.Queries, "shot_result", req.Result) {
+	if !helpers.CheckOptVocab(w, r.Context(), h.Queries, "shot_result", req.Result) {
 		return
 	}
-	if !checkOptVocab(w, r.Context(), h.Queries, "shot_miss", req.Miss) {
+	if !helpers.CheckOptVocab(w, r.Context(), h.Queries, "shot_miss", req.Miss) {
 		return
 	}
-	if !checkOptVocab(w, r.Context(), h.Queries, "shot_strike", req.StrikeQuality) {
+	if !helpers.CheckOptVocab(w, r.Context(), h.Queries, "shot_strike", req.StrikeQuality) {
 		return
 	}
 

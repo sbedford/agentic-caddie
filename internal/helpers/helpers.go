@@ -1,4 +1,4 @@
-package handlers
+package helpers
 
 import (
 	"context"
@@ -11,42 +11,42 @@ import (
 	"github.com/sbedford/agentic-caddie/internal/db"
 )
 
-func nullableString(s sql.NullString) *string {
+func NullableString(s sql.NullString) *string {
 	if !s.Valid {
 		return nil
 	}
 	return &s.String
 }
 
-func nullableFloat64(f sql.NullFloat64) *float64 {
+func NullableFloat64(f sql.NullFloat64) *float64 {
 	if !f.Valid {
 		return nil
 	}
 	return &f.Float64
 }
 
-func nullableInt64(i sql.NullInt64) *int64 {
+func NullableInt64(i sql.NullInt64) *int64 {
 	if !i.Valid {
 		return nil
 	}
 	return &i.Int64
 }
 
-func nullableBool(b sql.NullBool) *bool {
+func NullableBool(b sql.NullBool) *bool {
 	if !b.Valid {
 		return nil
 	}
 	return &b.Bool
 }
 
-func nullableTime(t sql.NullTime) *time.Time {
+func NullableTime(t sql.NullTime) *time.Time {
 	if !t.Valid {
 		return nil
 	}
 	return &t.Time
 }
 
-func checkVocab(w http.ResponseWriter, ctx context.Context, q *db.Queries, domain, value string) bool {
+func CheckVocab(w http.ResponseWriter, ctx context.Context, q *db.Queries, domain, value string) bool {
 	n, err := q.VocabValueExists(ctx, db.VocabValueExistsParams{Domain: domain, Value: value})
 	if err != nil {
 		log.Printf("vocab check failed for %s: %v", domain, err)
@@ -60,9 +60,9 @@ func checkVocab(w http.ResponseWriter, ctx context.Context, q *db.Queries, domai
 	return true
 }
 
-func checkOptVocab(w http.ResponseWriter, ctx context.Context, q *db.Queries, domain string, value *string) bool {
+func CheckOptVocab(w http.ResponseWriter, ctx context.Context, q *db.Queries, domain string, value *string) bool {
 	if value == nil || *value == "" {
 		return true
 	}
-	return checkVocab(w, ctx, q, domain, *value)
+	return CheckVocab(w, ctx, q, domain, *value)
 }
