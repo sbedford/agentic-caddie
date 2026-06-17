@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
+	"fmt"
 	"log"
 
 	"github.com/sbedford/agentic-caddie/internal/agent"
@@ -72,10 +74,16 @@ func main() {
 		CurrentRound: r[len(r)-1],
 	}
 
-	result, err := agent.GetAdvice(context.Background(), req)
+	out, err := json.Marshal(req)
+	if err != nil {
+		fmt.Errorf("marshal failed: %w", err)
+	}
+	log.Printf(string(out))
+
+	/*result, err := agent.GetAdvice(context.Background(), req)
 	if err != nil {
 		log.Fatalf("agent error: %v", err)
 	}
 	log.Println(result)
-
+	*/
 }
