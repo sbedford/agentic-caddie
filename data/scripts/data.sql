@@ -3477,3 +3477,34 @@ VALUES
     total_score  = (SELECT SUM(score)  FROM holes WHERE round_id = rounds.id),
     total_points = (SELECT SUM(points) FROM holes WHERE round_id = rounds.id),
     total_putts  = (SELECT SUM(putts)  FROM holes WHERE round_id = rounds.id);
+
+UPDATE holes
+SET fairway_hit = (
+    SELECT CASE
+        WHEN s.result = 'fairway' THEN 1
+        ELSE 0
+    END
+    FROM shots s
+    WHERE s.hole_id     = holes.id
+      AND s.shot_number = 1
+      AND s.shot_type   = 'tee'
+)
+WHERE EXISTS (
+    SELECT 1
+    FROM shots s
+    WHERE s.hole_id     = holes.id
+      AND s.shot_number = 1
+      AND s.shot_type   = 'tee'
+)
+-- exclude par 3s: the tee shot there is recorded as shot_type='tee'
+-- but represents the approach (no fairway exists on a par 3)
+-- joins through the round's actual tee, since par can in principle
+-- differ by tee (not the case on this course today, but kept precise)
+AND 3 != (
+    SELECT th.par
+    FROM tee_holes th
+    JOIN rounds r ON r.id = holes.round_id
+    JOIN tees t   ON t.course_id = r.course_id AND t.name = r.tees
+    WHERE th.course_hole_id = holes.course_hole_id
+      AND th.tee_id         = t.id
+);

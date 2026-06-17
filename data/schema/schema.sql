@@ -333,6 +333,7 @@ CREATE TABLE holes (
     score               INTEGER,
     points              INTEGER,
     putts               INTEGER,
+    fairway_hit         BOOLEAN,
     gir                 BOOLEAN,
     scramble_save       BOOLEAN,
     penalty             BOOLEAN,

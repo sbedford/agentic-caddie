@@ -726,9 +726,23 @@ FROM holes
 WHERE id = ?
 `
 
-func (q *Queries) GetHoleByID(ctx context.Context, id int64) (Hole, error) {
+type GetHoleByIDRow struct {
+	ID           int64
+	RoundID      int64
+	CourseHoleID int64
+	HoleNumber   int64
+	FlagPosition sql.NullString
+	Score        sql.NullInt64
+	Points       sql.NullInt64
+	Putts        sql.NullInt64
+	Gir          sql.NullBool
+	ScrambleSave sql.NullBool
+	Penalty      sql.NullBool
+}
+
+func (q *Queries) GetHoleByID(ctx context.Context, id int64) (GetHoleByIDRow, error) {
 	row := q.db.QueryRowContext(ctx, getHoleByID, id)
-	var i Hole
+	var i GetHoleByIDRow
 	err := row.Scan(
 		&i.ID,
 		&i.RoundID,
@@ -758,9 +772,23 @@ type GetHoleByRoundAndNumberParams struct {
 	HoleNumber int64
 }
 
-func (q *Queries) GetHoleByRoundAndNumber(ctx context.Context, arg GetHoleByRoundAndNumberParams) (Hole, error) {
+type GetHoleByRoundAndNumberRow struct {
+	ID           int64
+	RoundID      int64
+	CourseHoleID int64
+	HoleNumber   int64
+	FlagPosition sql.NullString
+	Score        sql.NullInt64
+	Points       sql.NullInt64
+	Putts        sql.NullInt64
+	Gir          sql.NullBool
+	ScrambleSave sql.NullBool
+	Penalty      sql.NullBool
+}
+
+func (q *Queries) GetHoleByRoundAndNumber(ctx context.Context, arg GetHoleByRoundAndNumberParams) (GetHoleByRoundAndNumberRow, error) {
 	row := q.db.QueryRowContext(ctx, getHoleByRoundAndNumber, arg.RoundID, arg.HoleNumber)
-	var i Hole
+	var i GetHoleByRoundAndNumberRow
 	err := row.Scan(
 		&i.ID,
 		&i.RoundID,
@@ -775,6 +803,66 @@ func (q *Queries) GetHoleByRoundAndNumber(ctx context.Context, arg GetHoleByRoun
 		&i.Penalty,
 	)
 	return i, err
+}
+
+const getHoleStats = `-- name: GetHoleStats :many
+
+SELECT r.played_at, h.score, h.points, h.putts, h.fairway_hit, h.gir
+FROM holes h 
+INNER JOIN course_holes ch ON h.course_hole_id=ch.id and ch.course_id = ?1
+INNER JOIN rounds r ON r.id = h.round_id
+INNER JOIN tees t ON t.course_id = ch.course_id and t.name = ?2
+WHERE h.hole_number=?3
+ORDER BY r.played_at DESC
+`
+
+type GetHoleStatsParams struct {
+	Courseid   int64
+	Teename    string
+	Holenumber int64
+}
+
+type GetHoleStatsRow struct {
+	PlayedAt   time.Time
+	Score      sql.NullInt64
+	Points     sql.NullInt64
+	Putts      sql.NullInt64
+	FairwayHit sql.NullBool
+	Gir        sql.NullBool
+}
+
+// ============================================================
+// Statistics
+// Used by agent tools to summarise performance across different dimensions
+// ============================================================
+func (q *Queries) GetHoleStats(ctx context.Context, arg GetHoleStatsParams) ([]GetHoleStatsRow, error) {
+	rows, err := q.db.QueryContext(ctx, getHoleStats, arg.Courseid, arg.Teename, arg.Holenumber)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetHoleStatsRow
+	for rows.Next() {
+		var i GetHoleStatsRow
+		if err := rows.Scan(
+			&i.PlayedAt,
+			&i.Score,
+			&i.Points,
+			&i.Putts,
+			&i.FairwayHit,
+			&i.Gir,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const getLatestCommentaryByScope = `-- name: GetLatestCommentaryByScope :one
@@ -1408,19 +1496,33 @@ WHERE round_id = ?
 ORDER BY hole_number
 `
 
+type ListHolesByRoundRow struct {
+	ID           int64
+	RoundID      int64
+	CourseHoleID int64
+	HoleNumber   int64
+	FlagPosition sql.NullString
+	Score        sql.NullInt64
+	Points       sql.NullInt64
+	Putts        sql.NullInt64
+	Gir          sql.NullBool
+	ScrambleSave sql.NullBool
+	Penalty      sql.NullBool
+}
+
 // ============================================================
 // HOLES
 // Unique constraint: (round_id, hole_number)
 // ============================================================
-func (q *Queries) ListHolesByRound(ctx context.Context, roundID int64) ([]Hole, error) {
+func (q *Queries) ListHolesByRound(ctx context.Context, roundID int64) ([]ListHolesByRoundRow, error) {
 	rows, err := q.db.QueryContext(ctx, listHolesByRound, roundID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Hole
+	var items []ListHolesByRoundRow
 	for rows.Next() {
-		var i Hole
+		var i ListHolesByRoundRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.RoundID,

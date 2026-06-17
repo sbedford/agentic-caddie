@@ -591,3 +591,18 @@ WHERE scope    = ?
 -- name: DeleteCommentary :exec
 DELETE FROM commentary
 WHERE id = ?;
+
+
+-- ============================================================
+-- Statistics
+-- Used by agent tools to summarise performance across different dimensions
+-- ============================================================
+
+-- name: GetHoleStats :many
+SELECT r.played_at, h.score, h.points, h.putts, h.fairway_hit, h.gir
+FROM holes h 
+INNER JOIN course_holes ch ON h.course_hole_id=ch.id and ch.course_id = sqlc.arg(CourseId)
+INNER JOIN rounds r ON r.id = h.round_id
+INNER JOIN tees t ON t.course_id = ch.course_id and t.name = sqlc.arg(TeeName)
+WHERE h.hole_number=sqlc.arg(HoleNumber)
+ORDER BY r.played_at DESC;

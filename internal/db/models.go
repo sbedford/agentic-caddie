@@ -41,6 +41,7 @@ type Hole struct {
 	Score        sql.NullInt64
 	Points       sql.NullInt64
 	Putts        sql.NullInt64
+	FairwayHit   sql.NullBool
 	Gir          sql.NullBool
 	ScrambleSave sql.NullBool
 	Penalty      sql.NullBool
