@@ -77,7 +77,6 @@ func (h *holeStatsHandler) handle(ctx context.Context, raw json.RawMessage) (str
 	return string(out), nil
 }
 
-// in RoundHistoryTool.go (or wherever the round history tool lives)
 func NewHoleStatsHandler(q *db.Queries) func(context.Context, json.RawMessage) (string, error) {
 	h := &holeStatsHandler{queries: q}
 	return h.handle

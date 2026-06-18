@@ -200,6 +200,20 @@ INNER JOIN course_holes ch ON ch.id=th.course_hole_id and ch.hole_number=sqlc.ar
 INNER JOIN tees t ON th.tee_Id = t.id AND t.name = sqlc.arg(TeeName)
 INNER JOIN courses c ON c.id=t.course_id and  t.course_id=c.Id AND c.id=sqlc.arg(CourseId);
 
+-- name: GetHolesByCourseAndTee :many
+SELECT ch.hole_number, th.Distance, th.Par, th.stroke_index
+FROM course_holes ch
+INNER JOIN courses c ON c.ID = sqlc.arg(CourseId) AND c.ID = ch.course_id
+INNER JOIN tees t ON c.ID=T.course_id AND t.Name=sqlc.arg(TeeName)
+INNER JOIN tee_holes th ON th.tee_Id = t.ID AND th.course_hole_id = ch.ID;
+
+-- name: GetHolesByCourse :many
+SELECT t.Name as TeeName, ch.hole_number, th.Distance, th.Par, th.stroke_index
+FROM course_holes ch
+INNER JOIN courses c ON c.ID = sqlc.arg(CourseId) AND c.ID = ch.course_id
+INNER JOIN tees t ON c.ID=T.course_id
+INNER JOIN tee_holes th ON th.tee_Id = t.ID AND th.course_hole_id = ch.ID;
+
 --CourseId TeeName HoleNumber
 
 -- name: CreateTeeHole :execresult
@@ -615,3 +629,4 @@ INNER JOIN rounds r ON r.id = h.round_id
 INNER JOIN tees t ON t.course_id = ch.course_id and t.name = sqlc.arg(TeeName)
 WHERE h.hole_number=sqlc.arg(HoleNumber)
 ORDER BY r.played_at DESC;
+

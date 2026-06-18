@@ -394,6 +394,7 @@ CREATE TABLE shots (
     result          TEXT,
     miss            TEXT,
     strike_quality  TEXT,
+    pre_shot_recommendation TEXT,
     source          TEXT NOT NULL DEFAULT 'manual',
 
     UNIQUE(hole_id, shot_number)
@@ -415,7 +416,6 @@ CREATE TABLE commentary (
     content         TEXT NOT NULL,
     generated_at    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
-
 
 -- ============================================================
 -- INDEXES

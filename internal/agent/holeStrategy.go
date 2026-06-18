@@ -145,11 +145,12 @@ on-the-day pattern, or unusual conditions not previously encountered.
 
 # Output Format
 Respond only with the JSON object below. No preamble, no explanation outside the fields.
+Keep all fields below 20 words at all times.
 
 ## Fields
-* advice: Your specific recommendation on the strategy for the hole or shot
+* advice: Your specific recommendation on the strategy for the hole or shot.
 * club: the specific club recommended
-* reasoning: A short description of why this is your recommended approach
+* reasoning: A short description of why this is your recommended approach.
 * confidence: How confident are you on this stategy based on existing data
 
 ## Example

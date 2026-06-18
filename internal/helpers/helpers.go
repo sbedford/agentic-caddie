@@ -18,11 +18,25 @@ func NullableString(s sql.NullString) *string {
 	return &s.String
 }
 
+func String(s sql.NullString) string {
+	if !s.Valid {
+		return ""
+	}
+	return s.String
+}
+
 func NullableFloat64(f sql.NullFloat64) *float64 {
 	if !f.Valid {
 		return nil
 	}
 	return &f.Float64
+}
+
+func Float64(f sql.NullFloat64) float64 {
+	if !f.Valid {
+		return 0
+	}
+	return f.Float64
 }
 
 func NullableInt64(i sql.NullInt64) *int64 {
@@ -32,11 +46,25 @@ func NullableInt64(i sql.NullInt64) *int64 {
 	return &i.Int64
 }
 
+func Int64(i sql.NullInt64) int64 {
+	if !i.Valid {
+		return 0
+	}
+	return i.Int64
+}
+
 func NullableBool(b sql.NullBool) *bool {
 	if !b.Valid {
 		return nil
 	}
 	return &b.Bool
+}
+
+func Bool(b sql.NullBool) bool {
+	if !b.Valid {
+		return false
+	}
+	return b.Bool
 }
 
 func NullableTime(t sql.NullTime) *time.Time {
@@ -65,4 +93,14 @@ func CheckOptVocab(w http.ResponseWriter, ctx context.Context, q *db.Queries, do
 		return true
 	}
 	return CheckVocab(w, ctx, q, domain, *value)
+}
+
+func Filter[T any](slice []T, criteria func(T) bool) []T {
+	var matches []T
+	for _, item := range slice {
+		if criteria(item) {
+			matches = append(matches, item)
+		}
+	}
+	return matches
 }

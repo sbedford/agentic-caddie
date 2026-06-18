@@ -841,6 +841,99 @@ func (q *Queries) GetHoleStats(ctx context.Context, arg GetHoleStatsParams) ([]G
 	return items, nil
 }
 
+const getHolesByCourse = `-- name: GetHolesByCourse :many
+SELECT t.Name as TeeName, ch.hole_number, th.Distance, th.Par, th.stroke_index
+FROM course_holes ch
+INNER JOIN courses c ON c.ID = ?1 AND c.ID = ch.course_id
+INNER JOIN tees t ON c.ID=T.course_id
+INNER JOIN tee_holes th ON th.tee_Id = t.ID AND th.course_hole_id = ch.ID
+`
+
+type GetHolesByCourseRow struct {
+	Teename     string
+	HoleNumber  int64
+	Distance    int64
+	Par         int64
+	StrokeIndex sql.NullInt64
+}
+
+func (q *Queries) GetHolesByCourse(ctx context.Context, courseid int64) ([]GetHolesByCourseRow, error) {
+	rows, err := q.db.QueryContext(ctx, getHolesByCourse, courseid)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetHolesByCourseRow
+	for rows.Next() {
+		var i GetHolesByCourseRow
+		if err := rows.Scan(
+			&i.Teename,
+			&i.HoleNumber,
+			&i.Distance,
+			&i.Par,
+			&i.StrokeIndex,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getHolesByCourseAndTee = `-- name: GetHolesByCourseAndTee :many
+SELECT ch.hole_number, th.Distance, th.Par, th.stroke_index
+FROM course_holes ch
+INNER JOIN courses c ON c.ID = ?1 AND c.ID = ch.course_id
+INNER JOIN tees t ON c.ID=T.course_id AND t.Name=?2
+INNER JOIN tee_holes th ON th.tee_Id = t.ID AND th.course_hole_id = ch.ID
+`
+
+type GetHolesByCourseAndTeeParams struct {
+	Courseid int64
+	Teename  string
+}
+
+type GetHolesByCourseAndTeeRow struct {
+	HoleNumber  int64
+	Distance    int64
+	Par         int64
+	StrokeIndex sql.NullInt64
+}
+
+func (q *Queries) GetHolesByCourseAndTee(ctx context.Context, arg GetHolesByCourseAndTeeParams) ([]GetHolesByCourseAndTeeRow, error) {
+	rows, err := q.db.QueryContext(ctx, getHolesByCourseAndTee, arg.Courseid, arg.Teename)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetHolesByCourseAndTeeRow
+	for rows.Next() {
+		var i GetHolesByCourseAndTeeRow
+		if err := rows.Scan(
+			&i.HoleNumber,
+			&i.Distance,
+			&i.Par,
+			&i.StrokeIndex,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getLatestCommentaryByScope = `-- name: GetLatestCommentaryByScope :one
 SELECT id, scope, scope_id, content, generated_at
 FROM commentary
@@ -1002,9 +1095,21 @@ type GetShotByHoleAndNumberParams struct {
 	ShotNumber int64
 }
 
-func (q *Queries) GetShotByHoleAndNumber(ctx context.Context, arg GetShotByHoleAndNumberParams) (Shot, error) {
+type GetShotByHoleAndNumberRow struct {
+	ID            int64
+	HoleID        int64
+	ShotNumber    int64
+	ShotType      string
+	Club          sql.NullString
+	Result        sql.NullString
+	Miss          sql.NullString
+	StrikeQuality sql.NullString
+	Source        string
+}
+
+func (q *Queries) GetShotByHoleAndNumber(ctx context.Context, arg GetShotByHoleAndNumberParams) (GetShotByHoleAndNumberRow, error) {
 	row := q.db.QueryRowContext(ctx, getShotByHoleAndNumber, arg.HoleID, arg.ShotNumber)
-	var i Shot
+	var i GetShotByHoleAndNumberRow
 	err := row.Scan(
 		&i.ID,
 		&i.HoleID,
@@ -1026,9 +1131,21 @@ FROM shots
 WHERE id = ?
 `
 
-func (q *Queries) GetShotByID(ctx context.Context, id int64) (Shot, error) {
+type GetShotByIDRow struct {
+	ID            int64
+	HoleID        int64
+	ShotNumber    int64
+	ShotType      string
+	Club          sql.NullString
+	Result        sql.NullString
+	Miss          sql.NullString
+	StrikeQuality sql.NullString
+	Source        string
+}
+
+func (q *Queries) GetShotByID(ctx context.Context, id int64) (GetShotByIDRow, error) {
 	row := q.db.QueryRowContext(ctx, getShotByID, id)
-	var i Shot
+	var i GetShotByIDRow
 	err := row.Scan(
 		&i.ID,
 		&i.HoleID,
@@ -1831,19 +1948,31 @@ WHERE hole_id = ?
 ORDER BY shot_number
 `
 
+type ListShotsByHoleRow struct {
+	ID            int64
+	HoleID        int64
+	ShotNumber    int64
+	ShotType      string
+	Club          sql.NullString
+	Result        sql.NullString
+	Miss          sql.NullString
+	StrikeQuality sql.NullString
+	Source        string
+}
+
 // ============================================================
 // SHOTS
 // Unique constraint: (hole_id, shot_number)
 // ============================================================
-func (q *Queries) ListShotsByHole(ctx context.Context, holeID int64) ([]Shot, error) {
+func (q *Queries) ListShotsByHole(ctx context.Context, holeID int64) ([]ListShotsByHoleRow, error) {
 	rows, err := q.db.QueryContext(ctx, listShotsByHole, holeID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Shot
+	var items []ListShotsByHoleRow
 	for rows.Next() {
-		var i Shot
+		var i ListShotsByHoleRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.HoleID,
@@ -1882,15 +2011,27 @@ type ListShotsByHoleAndTypeParams struct {
 	ShotType string
 }
 
-func (q *Queries) ListShotsByHoleAndType(ctx context.Context, arg ListShotsByHoleAndTypeParams) ([]Shot, error) {
+type ListShotsByHoleAndTypeRow struct {
+	ID            int64
+	HoleID        int64
+	ShotNumber    int64
+	ShotType      string
+	Club          sql.NullString
+	Result        sql.NullString
+	Miss          sql.NullString
+	StrikeQuality sql.NullString
+	Source        string
+}
+
+func (q *Queries) ListShotsByHoleAndType(ctx context.Context, arg ListShotsByHoleAndTypeParams) ([]ListShotsByHoleAndTypeRow, error) {
 	rows, err := q.db.QueryContext(ctx, listShotsByHoleAndType, arg.HoleID, arg.ShotType)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Shot
+	var items []ListShotsByHoleAndTypeRow
 	for rows.Next() {
-		var i Shot
+		var i ListShotsByHoleAndTypeRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.HoleID,

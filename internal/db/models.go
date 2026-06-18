@@ -97,15 +97,16 @@ type Round struct {
 }
 
 type Shot struct {
-	ID            int64
-	HoleID        int64
-	ShotNumber    int64
-	ShotType      string
-	Club          sql.NullString
-	Result        sql.NullString
-	Miss          sql.NullString
-	StrikeQuality sql.NullString
-	Source        string
+	ID                    int64
+	HoleID                int64
+	ShotNumber            int64
+	ShotType              string
+	Club                  sql.NullString
+	Result                sql.NullString
+	Miss                  sql.NullString
+	StrikeQuality         sql.NullString
+	PreShotRecommendation sql.NullString
+	Source                string
 }
 
 type Tee struct {
