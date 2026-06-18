@@ -395,6 +395,7 @@ CREATE TABLE shots (
     miss            TEXT,
     strike_quality  TEXT,
     pre_shot_recommendation TEXT,
+    completed       BOOLEAN DEFAULT FALSE,
     source          TEXT NOT NULL DEFAULT 'manual',
 
     UNIQUE(hole_id, shot_number)

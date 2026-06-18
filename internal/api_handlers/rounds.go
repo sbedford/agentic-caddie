@@ -280,14 +280,19 @@ func (h RoundsHandler) CreateRound(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result, err := h.Queries.CreateRound(r.Context(), db.CreateRoundParams{
+	params := db.CreateRoundParams{
 		PlayerID:      req.PlayerID,
 		CourseID:      req.CourseID,
 		PlayedAt:      playedAt,
 		Tees:          req.Tees,
 		DailyHandicap: req.DailyHandicap,
 		RoundType:     req.RoundType,
-	})
+	}
+	if req.CompetitionType != "" {
+		params.CompetitionType = sql.NullString{String: req.CompetitionType, Valid: true}
+	}
+
+	result, err := h.Queries.CreateRound(r.Context(), params)
 	if err != nil {
 		log.Printf("failed to create round: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)

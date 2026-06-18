@@ -26,6 +26,7 @@ type holeResponse struct {
 	Score        *int64  `json:"score"`
 	Points       *int64  `json:"points"`
 	Putts        *int64  `json:"putts"`
+	FairwayHit   *bool   `json:"fairway_hit"`
 	GIR          *bool   `json:"gir"`
 	ScrambleSave *bool   `json:"scramble_save"`
 	Penalty      *bool   `json:"penalty"`
@@ -64,6 +65,7 @@ func toHoleResponse(h db.Hole) holeResponse {
 		Score:        helpers.NullableInt64(h.Score),
 		Points:       helpers.NullableInt64(h.Points),
 		Putts:        helpers.NullableInt64(h.Putts),
+		FairwayHit:   helpers.NullableBool(h.FairwayHit),
 		GIR:          helpers.NullableBool(h.Gir),
 		ScrambleSave: helpers.NullableBool(h.ScrambleSave),
 		Penalty:      helpers.NullableBool(h.Penalty),

@@ -1990,6 +1990,38 @@ const docTemplate = `{
             }
         },
         "/rounds": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "rounds"
+                ],
+                "summary": "List all rounds",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/handlers.roundResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid player ID",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            },
             "post": {
                 "consumes": [
                     "application/json"
@@ -2452,6 +2484,52 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "Shot not found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/shots/hole/{holeId}/reorder": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "shots"
+                ],
+                "summary": "Reorder shots for a hole",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Hole ID",
+                        "name": "holeId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Ordered shot IDs",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.reorderShotsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Invalid request",
                         "schema": {
                             "type": "string"
                         }
@@ -3188,6 +3266,212 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/vocabulary": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "vocabulary"
+                ],
+                "summary": "List all vocabulary entries grouped by domain",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/handlers.vocabularyEntryResponse"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "vocabulary"
+                ],
+                "summary": "Create a new vocabulary entry",
+                "parameters": [
+                    {
+                        "description": "Entry to create",
+                        "name": "entry",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.createVocabularyEntryRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.vocabularyEntryResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request body",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "409": {
+                        "description": "Entry already exists",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/vocabulary/{domain}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "vocabulary"
+                ],
+                "summary": "List vocabulary entries for a domain",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Domain name",
+                        "name": "domain",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/handlers.vocabularyEntryResponse"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/vocabulary/{domain}/{value}": {
+            "put": {
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "vocabulary"
+                ],
+                "summary": "Update label and sort order for a vocabulary entry",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Domain name",
+                        "name": "domain",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Value",
+                        "name": "value",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Fields to update",
+                        "name": "entry",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.updateVocabularyEntryRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Invalid request body",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "Entry not found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "vocabulary"
+                ],
+                "summary": "Delete a vocabulary entry",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Domain name",
+                        "name": "domain",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Value",
+                        "name": "value",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
@@ -3479,9 +3763,17 @@ const docTemplate = `{
         "handlers.createRoundRequest": {
             "type": "object",
             "properties": {
+                "competition_type": {
+                    "type": "string",
+                    "example": "stableford"
+                },
                 "course_id": {
                     "type": "integer",
                     "example": 1
+                },
+                "daily_handicap": {
+                    "type": "integer",
+                    "example": 18
                 },
                 "played_at": {
                     "type": "string",
@@ -3508,11 +3800,17 @@ const docTemplate = `{
                     "type": "string",
                     "example": "driver"
                 },
+                "completed": {
+                    "type": "boolean"
+                },
                 "hole_id": {
                     "type": "integer",
                     "example": 1
                 },
                 "miss": {
+                    "type": "string"
+                },
+                "pre_shot_recommendation": {
                     "type": "string"
                 },
                 "result": {
@@ -3591,11 +3889,35 @@ const docTemplate = `{
                 }
             }
         },
+        "handlers.createVocabularyEntryRequest": {
+            "type": "object",
+            "properties": {
+                "domain": {
+                    "type": "string",
+                    "example": "shot_type"
+                },
+                "label": {
+                    "type": "string",
+                    "example": "Punch"
+                },
+                "sort_order": {
+                    "type": "integer",
+                    "example": 9
+                },
+                "value": {
+                    "type": "string",
+                    "example": "punch"
+                }
+            }
+        },
         "handlers.holeResponse": {
             "type": "object",
             "properties": {
                 "course_hole_id": {
                     "type": "integer"
+                },
+                "fairway_hit": {
+                    "type": "boolean"
                 },
                 "flag_position": {
                     "type": "string"
@@ -3675,6 +3997,17 @@ const docTemplate = `{
                 }
             }
         },
+        "handlers.reorderShotsRequest": {
+            "type": "object",
+            "properties": {
+                "ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                }
+            }
+        },
         "handlers.retireClubRequest": {
             "type": "object",
             "properties": {
@@ -3687,11 +4020,17 @@ const docTemplate = `{
         "handlers.roundResponse": {
             "type": "object",
             "properties": {
+                "competition_type": {
+                    "type": "string"
+                },
                 "course_id": {
                     "type": "integer"
                 },
                 "created_at": {
                     "type": "string"
+                },
+                "daily_handicap": {
+                    "type": "integer"
                 },
                 "id": {
                     "type": "integer"
@@ -3725,6 +4064,9 @@ const docTemplate = `{
                 "club": {
                     "type": "string"
                 },
+                "completed": {
+                    "type": "boolean"
+                },
                 "hole_id": {
                     "type": "integer"
                 },
@@ -3732,6 +4074,9 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "miss": {
+                    "type": "string"
+                },
+                "pre_shot_recommendation": {
                     "type": "string"
                 },
                 "result": {
@@ -3936,7 +4281,13 @@ const docTemplate = `{
                     "type": "string",
                     "example": "driver"
                 },
+                "completed": {
+                    "type": "boolean"
+                },
                 "miss": {
+                    "type": "string"
+                },
+                "pre_shot_recommendation": {
                     "type": "string"
                 },
                 "result": {
@@ -3992,6 +4343,36 @@ const docTemplate = `{
                 "slope_rating": {
                     "type": "integer",
                     "example": 113
+                }
+            }
+        },
+        "handlers.updateVocabularyEntryRequest": {
+            "type": "object",
+            "properties": {
+                "label": {
+                    "type": "string",
+                    "example": "Punch Out"
+                },
+                "sort_order": {
+                    "type": "integer",
+                    "example": 9
+                }
+            }
+        },
+        "handlers.vocabularyEntryResponse": {
+            "type": "object",
+            "properties": {
+                "domain": {
+                    "type": "string"
+                },
+                "label": {
+                    "type": "string"
+                },
+                "sort_order": {
+                    "type": "integer"
+                },
+                "value": {
+                    "type": "string"
                 }
             }
         }

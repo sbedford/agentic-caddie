@@ -221,20 +221,22 @@ func (q *Queries) CreateRound(ctx context.Context, arg CreateRoundParams) (sql.R
 const createShot = `-- name: CreateShot :execresult
 INSERT INTO shots (
     hole_id, shot_number, shot_type, club,
-    result, miss, strike_quality, source
+    result, miss, strike_quality, source, pre_shot_recommendation,completed
 )
-VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?,?)
 `
 
 type CreateShotParams struct {
-	HoleID        int64
-	ShotNumber    int64
-	ShotType      string
-	Club          sql.NullString
-	Result        sql.NullString
-	Miss          sql.NullString
-	StrikeQuality sql.NullString
-	Source        string
+	HoleID                int64
+	ShotNumber            int64
+	ShotType              string
+	Club                  sql.NullString
+	Result                sql.NullString
+	Miss                  sql.NullString
+	StrikeQuality         sql.NullString
+	Source                string
+	PreShotRecommendation sql.NullString
+	Completed             sql.NullBool
 }
 
 func (q *Queries) CreateShot(ctx context.Context, arg CreateShotParams) (sql.Result, error) {
@@ -247,6 +249,8 @@ func (q *Queries) CreateShot(ctx context.Context, arg CreateShotParams) (sql.Res
 		arg.Miss,
 		arg.StrikeQuality,
 		arg.Source,
+		arg.PreShotRecommendation,
+		arg.Completed,
 	)
 }
 
@@ -1084,7 +1088,7 @@ func (q *Queries) GetRoundByPlayerAndDate(ctx context.Context, arg GetRoundByPla
 
 const getShotByHoleAndNumber = `-- name: GetShotByHoleAndNumber :one
 SELECT id, hole_id, shot_number, shot_type, club,
-       result, miss, strike_quality, source
+       result, miss, strike_quality, source, pre_shot_recommendation,completed
 FROM shots
 WHERE hole_id    = ?
   AND shot_number = ?
@@ -1096,15 +1100,17 @@ type GetShotByHoleAndNumberParams struct {
 }
 
 type GetShotByHoleAndNumberRow struct {
-	ID            int64
-	HoleID        int64
-	ShotNumber    int64
-	ShotType      string
-	Club          sql.NullString
-	Result        sql.NullString
-	Miss          sql.NullString
-	StrikeQuality sql.NullString
-	Source        string
+	ID                    int64
+	HoleID                int64
+	ShotNumber            int64
+	ShotType              string
+	Club                  sql.NullString
+	Result                sql.NullString
+	Miss                  sql.NullString
+	StrikeQuality         sql.NullString
+	Source                string
+	PreShotRecommendation sql.NullString
+	Completed             sql.NullBool
 }
 
 func (q *Queries) GetShotByHoleAndNumber(ctx context.Context, arg GetShotByHoleAndNumberParams) (GetShotByHoleAndNumberRow, error) {
@@ -1120,27 +1126,31 @@ func (q *Queries) GetShotByHoleAndNumber(ctx context.Context, arg GetShotByHoleA
 		&i.Miss,
 		&i.StrikeQuality,
 		&i.Source,
+		&i.PreShotRecommendation,
+		&i.Completed,
 	)
 	return i, err
 }
 
 const getShotByID = `-- name: GetShotByID :one
 SELECT id, hole_id, shot_number, shot_type, club,
-       result, miss, strike_quality, source
+       result, miss, strike_quality, source, pre_shot_recommendation,completed
 FROM shots
 WHERE id = ?
 `
 
 type GetShotByIDRow struct {
-	ID            int64
-	HoleID        int64
-	ShotNumber    int64
-	ShotType      string
-	Club          sql.NullString
-	Result        sql.NullString
-	Miss          sql.NullString
-	StrikeQuality sql.NullString
-	Source        string
+	ID                    int64
+	HoleID                int64
+	ShotNumber            int64
+	ShotType              string
+	Club                  sql.NullString
+	Result                sql.NullString
+	Miss                  sql.NullString
+	StrikeQuality         sql.NullString
+	Source                string
+	PreShotRecommendation sql.NullString
+	Completed             sql.NullBool
 }
 
 func (q *Queries) GetShotByID(ctx context.Context, id int64) (GetShotByIDRow, error) {
@@ -1156,6 +1166,8 @@ func (q *Queries) GetShotByID(ctx context.Context, id int64) (GetShotByIDRow, er
 		&i.Miss,
 		&i.StrikeQuality,
 		&i.Source,
+		&i.PreShotRecommendation,
+		&i.Completed,
 	)
 	return i, err
 }
@@ -1942,22 +1954,24 @@ func (q *Queries) ListRoundsByPlayerAndCourse(ctx context.Context, arg ListRound
 const listShotsByHole = `-- name: ListShotsByHole :many
 
 SELECT id, hole_id, shot_number, shot_type, club,
-       result, miss, strike_quality, source
+       result, miss, strike_quality, source, pre_shot_recommendation,completed
 FROM shots
 WHERE hole_id = ?
 ORDER BY shot_number
 `
 
 type ListShotsByHoleRow struct {
-	ID            int64
-	HoleID        int64
-	ShotNumber    int64
-	ShotType      string
-	Club          sql.NullString
-	Result        sql.NullString
-	Miss          sql.NullString
-	StrikeQuality sql.NullString
-	Source        string
+	ID                    int64
+	HoleID                int64
+	ShotNumber            int64
+	ShotType              string
+	Club                  sql.NullString
+	Result                sql.NullString
+	Miss                  sql.NullString
+	StrikeQuality         sql.NullString
+	Source                string
+	PreShotRecommendation sql.NullString
+	Completed             sql.NullBool
 }
 
 // ============================================================
@@ -1983,6 +1997,8 @@ func (q *Queries) ListShotsByHole(ctx context.Context, holeID int64) ([]ListShot
 			&i.Miss,
 			&i.StrikeQuality,
 			&i.Source,
+			&i.PreShotRecommendation,
+			&i.Completed,
 		); err != nil {
 			return nil, err
 		}
@@ -1999,7 +2015,7 @@ func (q *Queries) ListShotsByHole(ctx context.Context, holeID int64) ([]ListShot
 
 const listShotsByHoleAndType = `-- name: ListShotsByHoleAndType :many
 SELECT id, hole_id, shot_number, shot_type, club,
-       result, miss, strike_quality, source
+       result, miss, strike_quality, source, pre_shot_recommendation,completed
 FROM shots
 WHERE hole_id   = ?
   AND shot_type = ?
@@ -2012,15 +2028,17 @@ type ListShotsByHoleAndTypeParams struct {
 }
 
 type ListShotsByHoleAndTypeRow struct {
-	ID            int64
-	HoleID        int64
-	ShotNumber    int64
-	ShotType      string
-	Club          sql.NullString
-	Result        sql.NullString
-	Miss          sql.NullString
-	StrikeQuality sql.NullString
-	Source        string
+	ID                    int64
+	HoleID                int64
+	ShotNumber            int64
+	ShotType              string
+	Club                  sql.NullString
+	Result                sql.NullString
+	Miss                  sql.NullString
+	StrikeQuality         sql.NullString
+	Source                string
+	PreShotRecommendation sql.NullString
+	Completed             sql.NullBool
 }
 
 func (q *Queries) ListShotsByHoleAndType(ctx context.Context, arg ListShotsByHoleAndTypeParams) ([]ListShotsByHoleAndTypeRow, error) {
@@ -2042,6 +2060,8 @@ func (q *Queries) ListShotsByHoleAndType(ctx context.Context, arg ListShotsByHol
 			&i.Miss,
 			&i.StrikeQuality,
 			&i.Source,
+			&i.PreShotRecommendation,
+			&i.Completed,
 		); err != nil {
 			return nil, err
 		}
@@ -2345,18 +2365,22 @@ SET shot_type     = ?,
     result        = ?,
     miss          = ?,
     strike_quality = ?,
-    source        = ?
+    source        = ?,
+    pre_shot_recommendation        = ?,
+    completed        = ?
 WHERE id = ?
 `
 
 type UpdateShotParams struct {
-	ShotType      string
-	Club          sql.NullString
-	Result        sql.NullString
-	Miss          sql.NullString
-	StrikeQuality sql.NullString
-	Source        string
-	ID            int64
+	ShotType              string
+	Club                  sql.NullString
+	Result                sql.NullString
+	Miss                  sql.NullString
+	StrikeQuality         sql.NullString
+	Source                string
+	PreShotRecommendation sql.NullString
+	Completed             sql.NullBool
+	ID                    int64
 }
 
 func (q *Queries) UpdateShot(ctx context.Context, arg UpdateShotParams) error {
@@ -2367,6 +2391,8 @@ func (q *Queries) UpdateShot(ctx context.Context, arg UpdateShotParams) error {
 		arg.Miss,
 		arg.StrikeQuality,
 		arg.Source,
+		arg.PreShotRecommendation,
+		arg.Completed,
 		arg.ID,
 	)
 	return err

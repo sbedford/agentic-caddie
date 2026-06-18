@@ -201,8 +201,14 @@ definitions:
     type: object
   handlers.createRoundRequest:
     properties:
+      competition_type:
+        example: stableford
+        type: string
       course_id:
         example: 1
+        type: integer
+      daily_handicap:
+        example: 18
         type: integer
       played_at:
         example: "2024-06-01"
@@ -222,10 +228,14 @@ definitions:
       club:
         example: driver
         type: string
+      completed:
+        type: boolean
       hole_id:
         example: 1
         type: integer
       miss:
+        type: string
+      pre_shot_recommendation:
         type: string
       result:
         example: fairway
@@ -282,10 +292,27 @@ definitions:
         example: 113
         type: integer
     type: object
+  handlers.createVocabularyEntryRequest:
+    properties:
+      domain:
+        example: shot_type
+        type: string
+      label:
+        example: Punch
+        type: string
+      sort_order:
+        example: 9
+        type: integer
+      value:
+        example: punch
+        type: string
+    type: object
   handlers.holeResponse:
     properties:
       course_hole_id:
         type: integer
+      fairway_hit:
+        type: boolean
       flag_position:
         type: string
       gir:
@@ -337,6 +364,13 @@ definitions:
       specific_tee:
         type: string
     type: object
+  handlers.reorderShotsRequest:
+    properties:
+      ids:
+        items:
+          type: integer
+        type: array
+    type: object
   handlers.retireClubRequest:
     properties:
       removed_date:
@@ -345,10 +379,14 @@ definitions:
     type: object
   handlers.roundResponse:
     properties:
+      competition_type:
+        type: string
       course_id:
         type: integer
       created_at:
         type: string
+      daily_handicap:
+        type: integer
       id:
         type: integer
       played_at:
@@ -370,11 +408,15 @@ definitions:
     properties:
       club:
         type: string
+      completed:
+        type: boolean
       hole_id:
         type: integer
       id:
         type: integer
       miss:
+        type: string
+      pre_shot_recommendation:
         type: string
       result:
         type: string
@@ -516,7 +558,11 @@ definitions:
       club:
         example: driver
         type: string
+      completed:
+        type: boolean
       miss:
+        type: string
+      pre_shot_recommendation:
         type: string
       result:
         example: fairway
@@ -557,6 +603,26 @@ definitions:
       slope_rating:
         example: 113
         type: integer
+    type: object
+  handlers.updateVocabularyEntryRequest:
+    properties:
+      label:
+        example: Punch Out
+        type: string
+      sort_order:
+        example: 9
+        type: integer
+    type: object
+  handlers.vocabularyEntryResponse:
+    properties:
+      domain:
+        type: string
+      label:
+        type: string
+      sort_order:
+        type: integer
+      value:
+        type: string
     type: object
 host: localhost:3000
 info:
@@ -1857,6 +1923,27 @@ paths:
       tags:
       - pois
   /rounds:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/handlers.roundResponse'
+            type: array
+        "400":
+          description: Invalid player ID
+          schema:
+            type: string
+        "500":
+          description: Internal server error
+          schema:
+            type: string
+      summary: List all rounds
+      tags:
+      - rounds
     post:
       consumes:
       - application/json
@@ -2245,6 +2332,36 @@ paths:
           schema:
             type: string
       summary: Get a shot by hole and shot number
+      tags:
+      - shots
+  /shots/hole/{holeId}/reorder:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Hole ID
+        in: path
+        name: holeId
+        required: true
+        type: integer
+      - description: Ordered shot IDs
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.reorderShotsRequest'
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Invalid request
+          schema:
+            type: string
+        "500":
+          description: Internal server error
+          schema:
+            type: string
+      summary: Reorder shots for a hole
       tags:
       - shots
   /shots/hole/{holeId}/type/{shotType}:
@@ -2641,4 +2758,139 @@ paths:
       summary: Get a tee by course and name
       tags:
       - tees
+  /vocabulary:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/handlers.vocabularyEntryResponse'
+            type: array
+        "500":
+          description: Internal server error
+          schema:
+            type: string
+      summary: List all vocabulary entries grouped by domain
+      tags:
+      - vocabulary
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Entry to create
+        in: body
+        name: entry
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.createVocabularyEntryRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handlers.vocabularyEntryResponse'
+        "400":
+          description: Invalid request body
+          schema:
+            type: string
+        "409":
+          description: Entry already exists
+          schema:
+            type: string
+        "500":
+          description: Internal server error
+          schema:
+            type: string
+      summary: Create a new vocabulary entry
+      tags:
+      - vocabulary
+  /vocabulary/{domain}:
+    get:
+      parameters:
+      - description: Domain name
+        in: path
+        name: domain
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/handlers.vocabularyEntryResponse'
+            type: array
+        "500":
+          description: Internal server error
+          schema:
+            type: string
+      summary: List vocabulary entries for a domain
+      tags:
+      - vocabulary
+  /vocabulary/{domain}/{value}:
+    delete:
+      parameters:
+      - description: Domain name
+        in: path
+        name: domain
+        required: true
+        type: string
+      - description: Value
+        in: path
+        name: value
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "500":
+          description: Internal server error
+          schema:
+            type: string
+      summary: Delete a vocabulary entry
+      tags:
+      - vocabulary
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Domain name
+        in: path
+        name: domain
+        required: true
+        type: string
+      - description: Value
+        in: path
+        name: value
+        required: true
+        type: string
+      - description: Fields to update
+        in: body
+        name: entry
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.updateVocabularyEntryRequest'
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Invalid request body
+          schema:
+            type: string
+        "404":
+          description: Entry not found
+          schema:
+            type: string
+        "500":
+          description: Internal server error
+          schema:
+            type: string
+      summary: Update label and sort order for a vocabulary entry
+      tags:
+      - vocabulary
 swagger: "2.0"

@@ -23,48 +23,104 @@ type reorderShotsRequest struct {
 }
 
 type shotResponse struct {
-	ID            int64   `json:"id"`
-	HoleID        int64   `json:"hole_id"`
-	ShotNumber    int64   `json:"shot_number"`
-	ShotType      string  `json:"shot_type"`
-	Club          *string `json:"club"`
-	Result        *string `json:"result"`
-	Miss          *string `json:"miss"`
-	StrikeQuality *string `json:"strike_quality"`
-	Source        string  `json:"source"`
+	ID                    int64   `json:"id"`
+	HoleID                int64   `json:"hole_id"`
+	ShotNumber            int64   `json:"shot_number"`
+	ShotType              string  `json:"shot_type"`
+	Club                  *string `json:"club"`
+	Result                *string `json:"result"`
+	Miss                  *string `json:"miss"`
+	StrikeQuality         *string `json:"strike_quality"`
+	Source                string  `json:"source"`
+	PreShotRecommendation *string `json:"pre_shot_recommendation"`
+	Completed             *bool   `json:"completed"`
 }
 
 type createShotRequest struct {
-	HoleID        int64   `json:"hole_id"        example:"1"`
-	ShotNumber    int64   `json:"shot_number"    example:"1"`
-	ShotType      string  `json:"shot_type"      example:"tee"`
-	Club          *string `json:"club"           example:"driver"`
-	Result        *string `json:"result"         example:"fairway"`
-	Miss          *string `json:"miss"`
-	StrikeQuality *string `json:"strike_quality" example:"clean"`
-	Source        string  `json:"source"         example:"manual"`
+	HoleID                int64   `json:"hole_id"                 example:"1"`
+	ShotNumber            int64   `json:"shot_number"             example:"1"`
+	ShotType              string  `json:"shot_type"               example:"tee"`
+	Club                  *string `json:"club"                    example:"driver"`
+	Result                *string `json:"result"                  example:"fairway"`
+	Miss                  *string `json:"miss"`
+	StrikeQuality         *string `json:"strike_quality"          example:"clean"`
+	Source                string  `json:"source"                  example:"manual"`
+	PreShotRecommendation *string `json:"pre_shot_recommendation"`
+	Completed             *bool   `json:"completed"`
 }
 
 type updateShotRequest struct {
-	ShotType      string  `json:"shot_type"      example:"tee"`
-	Club          *string `json:"club"           example:"driver"`
-	Result        *string `json:"result"         example:"fairway"`
-	Miss          *string `json:"miss"`
-	StrikeQuality *string `json:"strike_quality" example:"clean"`
-	Source        string  `json:"source"         example:"manual"`
+	ShotType              string  `json:"shot_type"               example:"tee"`
+	Club                  *string `json:"club"                    example:"driver"`
+	Result                *string `json:"result"                  example:"fairway"`
+	Miss                  *string `json:"miss"`
+	StrikeQuality         *string `json:"strike_quality"          example:"clean"`
+	Source                string  `json:"source"                  example:"manual"`
+	PreShotRecommendation *string `json:"pre_shot_recommendation"`
+	Completed             *bool   `json:"completed"`
 }
 
-func toShotResponse(s db.Shot) shotResponse {
+func toShotResponse(s db.GetShotByIDRow) shotResponse {
 	return shotResponse{
-		ID:            s.ID,
-		HoleID:        s.HoleID,
-		ShotNumber:    s.ShotNumber,
-		ShotType:      s.ShotType,
-		Club:          helpers.NullableString(s.Club),
-		Result:        helpers.NullableString(s.Result),
-		Miss:          helpers.NullableString(s.Miss),
-		StrikeQuality: helpers.NullableString(s.StrikeQuality),
-		Source:        s.Source,
+		ID:                    s.ID,
+		HoleID:                s.HoleID,
+		ShotNumber:            s.ShotNumber,
+		ShotType:              s.ShotType,
+		Club:                  helpers.NullableString(s.Club),
+		Result:                helpers.NullableString(s.Result),
+		Miss:                  helpers.NullableString(s.Miss),
+		StrikeQuality:         helpers.NullableString(s.StrikeQuality),
+		Source:                s.Source,
+		PreShotRecommendation: helpers.NullableString(s.PreShotRecommendation),
+		Completed:             helpers.NullableBool(s.Completed),
+	}
+}
+
+func toShotResponseFromHoleAndNumber(s db.GetShotByHoleAndNumberRow) shotResponse {
+	return shotResponse{
+		ID:                    s.ID,
+		HoleID:                s.HoleID,
+		ShotNumber:            s.ShotNumber,
+		ShotType:              s.ShotType,
+		Club:                  helpers.NullableString(s.Club),
+		Result:                helpers.NullableString(s.Result),
+		Miss:                  helpers.NullableString(s.Miss),
+		StrikeQuality:         helpers.NullableString(s.StrikeQuality),
+		Source:                s.Source,
+		PreShotRecommendation: helpers.NullableString(s.PreShotRecommendation),
+		Completed:             helpers.NullableBool(s.Completed),
+	}
+}
+
+func toShotResponseFromListRow(s db.ListShotsByHoleRow) shotResponse {
+	return shotResponse{
+		ID:                    s.ID,
+		HoleID:                s.HoleID,
+		ShotNumber:            s.ShotNumber,
+		ShotType:              s.ShotType,
+		Club:                  helpers.NullableString(s.Club),
+		Result:                helpers.NullableString(s.Result),
+		Miss:                  helpers.NullableString(s.Miss),
+		StrikeQuality:         helpers.NullableString(s.StrikeQuality),
+		Source:                s.Source,
+		PreShotRecommendation: helpers.NullableString(s.PreShotRecommendation),
+		Completed:             helpers.NullableBool(s.Completed),
+	}
+}
+
+func toShotResponseFromListTypeRow(s db.ListShotsByHoleAndTypeRow) shotResponse {
+	return shotResponse{
+		ID:                    s.ID,
+		HoleID:                s.HoleID,
+		ShotNumber:            s.ShotNumber,
+		ShotType:              s.ShotType,
+		Club:                  helpers.NullableString(s.Club),
+		Result:                helpers.NullableString(s.Result),
+		Miss:                  helpers.NullableString(s.Miss),
+		StrikeQuality:         helpers.NullableString(s.StrikeQuality),
+		Source:                s.Source,
+		PreShotRecommendation: helpers.NullableString(s.PreShotRecommendation),
+		Completed:             helpers.NullableBool(s.Completed),
 	}
 }
 
@@ -93,7 +149,7 @@ func (h ShotsHandler) ListShotsByHole(w http.ResponseWriter, r *http.Request) {
 
 	resp := make([]shotResponse, len(shots))
 	for i, s := range shots {
-		resp[i] = toShotResponse(s)
+		resp[i] = toShotResponseFromListRow(s)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -131,7 +187,7 @@ func (h ShotsHandler) ListShotsByHoleAndType(w http.ResponseWriter, r *http.Requ
 
 	resp := make([]shotResponse, len(shots))
 	for i, s := range shots {
-		resp[i] = toShotResponse(s)
+		resp[i] = toShotResponseFromListTypeRow(s)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -212,7 +268,7 @@ func (h ShotsHandler) GetShotByHoleAndNumber(w http.ResponseWriter, r *http.Requ
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	if err = json.NewEncoder(w).Encode(toShotResponse(shot)); err != nil {
+	if err = json.NewEncoder(w).Encode(toShotResponseFromHoleAndNumber(shot)); err != nil {
 		http.Error(w, "Internal error", http.StatusInternalServerError)
 	}
 }
@@ -274,6 +330,12 @@ func (h ShotsHandler) CreateShot(w http.ResponseWriter, r *http.Request) {
 	}
 	if req.StrikeQuality != nil {
 		params.StrikeQuality = sql.NullString{String: *req.StrikeQuality, Valid: true}
+	}
+	if req.PreShotRecommendation != nil {
+		params.PreShotRecommendation = sql.NullString{String: *req.PreShotRecommendation, Valid: true}
+	}
+	if req.Completed != nil {
+		params.Completed = sql.NullBool{Bool: *req.Completed, Valid: true}
 	}
 
 	result, err := h.Queries.CreateShot(r.Context(), params)
@@ -353,6 +415,12 @@ func (h ShotsHandler) UpdateShot(w http.ResponseWriter, r *http.Request) {
 	}
 	if req.StrikeQuality != nil {
 		params.StrikeQuality = sql.NullString{String: *req.StrikeQuality, Valid: true}
+	}
+	if req.PreShotRecommendation != nil {
+		params.PreShotRecommendation = sql.NullString{String: *req.PreShotRecommendation, Valid: true}
+	}
+	if req.Completed != nil {
+		params.Completed = sql.NullBool{Bool: *req.Completed, Valid: true}
 	}
 
 	if err = h.Queries.UpdateShot(r.Context(), params); err != nil {

@@ -106,6 +106,7 @@ type Shot struct {
 	Miss                  sql.NullString
 	StrikeQuality         sql.NullString
 	PreShotRecommendation sql.NullString
+	Completed             sql.NullBool
 	Source                string
 }
 

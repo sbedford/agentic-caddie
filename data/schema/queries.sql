@@ -523,14 +523,14 @@ WHERE id = ?;
 
 -- name: ListShotsByHole :many
 SELECT id, hole_id, shot_number, shot_type, club,
-       result, miss, strike_quality, source
+       result, miss, strike_quality, source, pre_shot_recommendation,completed
 FROM shots
 WHERE hole_id = ?
 ORDER BY shot_number;
 
 -- name: ListShotsByHoleAndType :many
 SELECT id, hole_id, shot_number, shot_type, club,
-       result, miss, strike_quality, source
+       result, miss, strike_quality, source, pre_shot_recommendation,completed
 FROM shots
 WHERE hole_id   = ?
   AND shot_type = ?
@@ -538,13 +538,13 @@ ORDER BY shot_number;
 
 -- name: GetShotByID :one
 SELECT id, hole_id, shot_number, shot_type, club,
-       result, miss, strike_quality, source
+       result, miss, strike_quality, source, pre_shot_recommendation,completed
 FROM shots
 WHERE id = ?;
 
 -- name: GetShotByHoleAndNumber :one
 SELECT id, hole_id, shot_number, shot_type, club,
-       result, miss, strike_quality, source
+       result, miss, strike_quality, source, pre_shot_recommendation,completed
 FROM shots
 WHERE hole_id    = ?
   AND shot_number = ?;
@@ -552,9 +552,9 @@ WHERE hole_id    = ?
 -- name: CreateShot :execresult
 INSERT INTO shots (
     hole_id, shot_number, shot_type, club,
-    result, miss, strike_quality, source
+    result, miss, strike_quality, source, pre_shot_recommendation,completed
 )
-VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?,?);
 
 -- name: UpdateShot :exec
 UPDATE shots
@@ -563,7 +563,9 @@ SET shot_type     = ?,
     result        = ?,
     miss          = ?,
     strike_quality = ?,
-    source        = ?
+    source        = ?,
+    pre_shot_recommendation        = ?,
+    completed        = ?
 WHERE id = ?;
 
 -- name: DeleteShot :exec
