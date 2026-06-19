@@ -169,11 +169,35 @@ Keep all fields below 20 words at all times.
 func (this *GetAdviceRequest) BuildPrompt() string {
 
 	var sb strings.Builder
-	fmt.Fprintf(&sb, "%v is playing Hole %v at %v. Currently playing a tee shot %vm from the green.  Provide a stratey",
+	fmt.Fprintf(&sb, "%v is playing Hole %v at %v. ",
 		this.Player.Name,
 		this.ScopeForAdvice.Hole.HoleNumber,
-		this.CurrentRound.Course.Name,
-		strconv.FormatInt(this.ScopeForAdvice.Hole.Distance, 10))
+		this.CurrentRound.Course.Name)
+
+	currentLocation := this.ScopeForAdvice.CurrentLocation()
+	if currentLocation == models.LocationTee {
+		fmt.Fprintf(&sb, "Standing on the tee ")
+	} else if currentLocation == models.LocationRough {
+		fmt.Fprintf(&sb, "Standing in the %v rough ", this.ScopeForAdvice.LastShot().Miss)
+	} else if currentLocation == models.LocationBunker {
+		fmt.Fprintf(&sb, "Standing in a bunker ")
+		miss := this.ScopeForAdvice.LastShot().Miss
+		if miss != "" {
+			fmt.Fprintf(&sb, "on the %v ", miss)
+		}
+	} else if currentLocation == models.LocationHazard {
+		fmt.Fprintf(&sb, "Standing in a hazard ")
+		miss := this.ScopeForAdvice.LastShot().Miss
+		if miss != "" {
+			fmt.Fprintf(&sb, "on the %v ", miss)
+		}
+	} else if currentLocation == models.LocationGreen {
+		fmt.Fprintf(&sb, "Standing on the green")
+	}
+	if currentLocation != models.LocationGreen {
+		fmt.Fprintf(&sb, "%vm from the green. ", strconv.FormatInt(this.ScopeForAdvice.Hole.Distance, 10))
+	}
+	fmt.Fprintf(&sb, "Provide a stratey")
 	return sb.String()
 }
 

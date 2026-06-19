@@ -1,6 +1,8 @@
 package models
 
 import (
+	"cmp"
+	"fmt"
 	"slices"
 	"time"
 
@@ -58,6 +60,8 @@ type Round struct {
 	TotalPoints int64
 	TotalPutts  int64
 
+	RoundCompleted bool
+
 	PlayedHoles []PlayedHole
 }
 
@@ -79,6 +83,26 @@ func (this *Round) PointsBehind() int {
 		return (2 * len(completedHoles)) - int(this.TotalPoints)
 	}
 	return 0
+}
+
+// Finds the last hole
+func (this *Round) CurrentHole() (*PlayedHole, error) {
+
+	if !this.RoundCompleted {
+
+		incompleteHoles := helpers.Filter(this.PlayedHoles, func(ph PlayedHole) bool {
+			return ph.Completed == false
+		})
+
+		if len(incompleteHoles) == 0 {
+			return nil, fmt.Errorf("Round %v is not marked as completed but has no incomplete holes", this.ID)
+		} else if len(incompleteHoles) > 1 {
+			return nil, fmt.Errorf("Round %v has more than 1 incomplete hole", this.ID)
+		}
+
+		return &incompleteHoles[0], nil
+	}
+	return nil, nil
 }
 
 func (this *Round) StrokesAbovePar() int {
@@ -121,6 +145,116 @@ type PlayedHole struct {
 	ShotsTaken []Shot
 }
 
+func (hole *PlayedHole) LastShot() *Shot {
+
+	if hole.ShotsTaken == nil || len(hole.ShotsTaken) == 0 {
+		return nil
+	}
+	lastShot := slices.MaxFunc(hole.ShotsTaken, func(a, b Shot) int {
+		return cmp.Compare(a.ShotNumber, b.ShotNumber)
+	})
+	return &lastShot
+}
+
+type Location string
+
+const (
+	LocationTee           Location = "tee"
+	LocationFairway       Location = "fairway"
+	LocationRough         Location = "rough"
+	LocationBunker        Location = "bunker"
+	LocationGreen         Location = "green"
+	LocationHazard        Location = "hazard"
+	LocationHoleCompleted Location = "hole completed"
+)
+
+func (hole *PlayedHole) CurrentLocation() Location {
+
+	if hole.Completed {
+		return LocationHoleCompleted
+	}
+
+	if hole.ShotsTaken == nil || len(hole.ShotsTaken) == 0 {
+		return LocationTee
+	}
+
+	lastShot := hole.GetLastValidShot()
+	if lastShot == nil {
+		return LocationTee
+	}
+
+	switch lastShot.Result {
+	case "fairway":
+		return LocationFairway
+	case "green":
+		return LocationGreen
+	case "rough":
+		return LocationRough
+	case "bunker":
+		return LocationBunker
+	case "hazard":
+		return LocationHazard
+	}
+	return LocationTee
+}
+
+func (hole *PlayedHole) GetLastValidShot() *Shot {
+
+	if hole.ShotsTaken == nil || len(hole.ShotsTaken) == 0 {
+		return nil
+	}
+
+	var lastValidShot *Shot = nil
+	for _, shot := range hole.ShotsTaken {
+		if shot.ValidShot() {
+			lastValidShot = &shot
+		}
+	}
+
+	return lastValidShot
+}
+
+func (hole *PlayedHole) LookupShot(shotNumber int) (*Shot, error) {
+	idx := slices.IndexFunc(hole.ShotsTaken, func(s Shot) bool {
+		return shotNumber == int(s.ShotNumber)
+	})
+
+	if idx < 0 {
+		return nil, fmt.Errorf("Shot with number %v doesnt exist", shotNumber)
+	}
+
+	return &hole.ShotsTaken[idx], nil
+}
+
+func (hole *PlayedHole) RecordShot(shotType string, clubUsed Club, result string, missDirection string, strike string, agentRecommendation string) (*Shot, error) {
+
+	if hole.Completed {
+		return nil, fmt.Errorf("Hole %v already completed", hole.Hole.HoleNumber)
+	}
+
+	shotNumber := 1
+	lastShot := hole.LastShot()
+	if lastShot != nil {
+		shotNumber = int(lastShot.ShotNumber) + 1
+	}
+
+	shot := Shot{
+		Hole:                  *hole,
+		ShotNumber:            int64(shotNumber),
+		ShotType:              shotType,
+		Club:                  clubUsed.ClubName,
+		Result:                result,
+		Miss:                  missDirection,
+		StrikeQuality:         strike,
+		PreShotRecommendation: agentRecommendation,
+		Completed:             true,
+	}
+
+	hole.ShotsTaken = append(hole.ShotsTaken, shot)
+
+	return &shot, nil
+}
+
 type Shot struct {
 	Hole                  PlayedHole
 	ShotNumber            int64 // 1, 2,3,4
@@ -132,6 +266,10 @@ type Shot struct {
 	PreShotRecommendation string
 	Completed             bool
 	Source                string
+}
+
+func (shot *Shot) ValidShot() bool {
+	return (shot.Result == "fairway" || shot.Result == "rough" || shot.Result == "bunker" || shot.Result == "hazard" || shot.Result == "green")
 }
 
 type Course struct {
@@ -209,6 +347,8 @@ func ConvertRound(in db.Round, c Course, p Player, t Tee) Round {
 		DailyHandicap:   in.DailyHandicap,
 		RoundType:       in.RoundType,
 		CompetitionType: helpers.String(in.CompetitionType),
+
+		RoundCompleted: in.Completed,
 
 		TotalScore:  helpers.Int64(in.TotalScore),
 		TotalPoints: helpers.Int64(in.TotalPoints),
