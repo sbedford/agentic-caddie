@@ -60,7 +60,7 @@ type updateShotRequest struct {
 	Completed             *bool   `json:"completed"`
 }
 
-func toShotResponse(s db.GetShotByIDRow) shotResponse {
+func toShotResponse(s db.Shot) shotResponse {
 	return shotResponse{
 		ID:                    s.ID,
 		HoleID:                s.HoleID,
@@ -76,7 +76,7 @@ func toShotResponse(s db.GetShotByIDRow) shotResponse {
 	}
 }
 
-func toShotResponseFromHoleAndNumber(s db.GetShotByHoleAndNumberRow) shotResponse {
+func toShotResponseFromHoleAndNumber(s db.Shot) shotResponse {
 	return shotResponse{
 		ID:                    s.ID,
 		HoleID:                s.HoleID,
@@ -92,7 +92,7 @@ func toShotResponseFromHoleAndNumber(s db.GetShotByHoleAndNumberRow) shotRespons
 	}
 }
 
-func toShotResponseFromListRow(s db.ListShotsByHoleRow) shotResponse {
+func toShotResponseFromListRow(s db.Shot) shotResponse {
 	return shotResponse{
 		ID:                    s.ID,
 		HoleID:                s.HoleID,
@@ -108,7 +108,7 @@ func toShotResponseFromListRow(s db.ListShotsByHoleRow) shotResponse {
 	}
 }
 
-func toShotResponseFromListTypeRow(s db.ListShotsByHoleAndTypeRow) shotResponse {
+func toShotResponseFromListTypeRow(s db.Shot) shotResponse {
 	return shotResponse{
 		ID:                    s.ID,
 		HoleID:                s.HoleID,

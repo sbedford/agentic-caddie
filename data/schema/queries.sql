@@ -201,14 +201,14 @@ INNER JOIN tees t ON th.tee_Id = t.id AND t.name = sqlc.arg(TeeName)
 INNER JOIN courses c ON c.id=t.course_id and  t.course_id=c.Id AND c.id=sqlc.arg(CourseId);
 
 -- name: GetHolesByCourseAndTee :many
-SELECT ch.hole_number, th.Distance, th.Par, th.stroke_index
+SELECT th.ID as TeeHoleID, ch.ID as CourseHoleID, ch.hole_number, th.Distance, th.Par, th.stroke_index
 FROM course_holes ch
 INNER JOIN courses c ON c.ID = sqlc.arg(CourseId) AND c.ID = ch.course_id
 INNER JOIN tees t ON c.ID=T.course_id AND t.Name=sqlc.arg(TeeName)
 INNER JOIN tee_holes th ON th.tee_Id = t.ID AND th.course_hole_id = ch.ID;
 
 -- name: GetHolesByCourse :many
-SELECT t.Name as TeeName, ch.hole_number, th.Distance, th.Par, th.stroke_index
+SELECT th.ID as TeeHoleID, ch.ID as CourseHoleID, t.Name as TeeName, ch.hole_number, th.Distance, th.Par, th.stroke_index
 FROM course_holes ch
 INNER JOIN courses c ON c.ID = sqlc.arg(CourseId) AND c.ID = ch.course_id
 INNER JOIN tees t ON c.ID=T.course_id
@@ -419,10 +419,22 @@ SELECT *
 FROM rounds
 ORDER BY played_at DESC;
 
+-- name: ListRoundsByPlayer :many
+SELECT *
+FROM rounds
+WHERE player_id = ?
+ORDER BY played_at DESC;
+
 -- name: ListCompletedRoundsByPlayer :many
 SELECT *
 FROM rounds
 WHERE player_id = ? AND Completed=TRUE
+ORDER BY played_at DESC;
+
+-- name: ListActiveRoundsByPlayer :many
+SELECT *
+FROM rounds
+WHERE player_id = ? AND Completed=FALSE
 ORDER BY played_at DESC;
 
 -- name: ListRoundsByPlayerAndCourse :many
@@ -446,9 +458,17 @@ WHERE player_id = ?
 -- name: CreateRound :execresult
 INSERT INTO rounds (
     player_id, course_id, played_at, tees, daily_handicap, round_type, competition_type,
-    total_score, total_points, total_putts, created_at
+    total_score, total_points, total_putts, completed, created_at
 )
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP);
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP);
+
+-- name: UpdateRound :exec
+UPDATE rounds 
+SET  total_score=?,
+     total_points=?,
+     total_putts=?, 
+     completed =?
+WHERE ID=?;
 
 -- name: UpdateRoundTotals :exec
 -- Called after holes are inserted/updated to refresh denormalised totals
@@ -487,20 +507,24 @@ WHERE round_id    = ?
 
 -- name: CreateHole :execresult
 INSERT INTO holes (
-    round_id, course_hole_id, hole_number, flag_position,
-    score, points, putts, gir, scramble_save, penalty
+    round_id, course_hole_id, hole_number,daily_distance, flag_position,
+    score, points, putts, gir, scramble_save, penalty, penalty_strokes, wiped, completed
 )
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?,?,?);
 
 -- name: UpdateHole :exec
 UPDATE holes
 SET flag_position  = ?,
+    daily_distance = ?,
     score          = ?,
     points         = ?,
     putts          = ?,
     gir            = ?,
     scramble_save  = ?,
-    penalty        = ?
+    penalty        = ?,
+    penalty_strokes  = ?,
+    wiped        = ?,
+    completed        = ?
 WHERE id = ?;
 
 -- name: DeleteHole :exec
@@ -531,11 +555,12 @@ SELECT *
 FROM shots
 WHERE id = ?;
 
--- name: GetShotsByRound :one
+
+-- name: ListShotsByRound :many
 SELECT s.*
 FROM shots s
-INNER JOIN holes h ON h.ID = s.hole_id AND h.round_id=?;
-
+INNER JOIN Holes h ON s.hole_id = h.ID and h.round_id = ?
+ORDER BY hole_id, shot_number;
 
 -- name: GetShotByHoleAndNumber :one
 SELECT *
@@ -545,14 +570,15 @@ WHERE hole_id    = ?
 
 -- name: CreateShot :execresult
 INSERT INTO shots (
-    hole_id, shot_number, shot_type, club,
+    hole_id, shot_number, distance_to_pin, shot_type, club,
     result, miss, strike_quality, source, pre_shot_recommendation,completed
 )
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?,?);
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?,?,?);
 
 -- name: UpdateShot :exec
 UPDATE shots
-SET shot_type     = ?,
+SET distance_to_pin =?,
+    shot_type     = ?,
     club          = ?,
     result        = ?,
     miss          = ?,

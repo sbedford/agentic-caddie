@@ -71,5 +71,8 @@ func main() {
 	log.Println("Total Cache Create Tokens:", response.Usage.TotalCacheCreationInputTokens)
 	log.Println("Total Cache Read Tokens:", response.Usage.TotalCacheReadInputTokens)
 	log.Println("------------------------")
+}
+
+func PlayRound() {
 
 }

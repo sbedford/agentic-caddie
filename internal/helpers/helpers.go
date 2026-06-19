@@ -25,6 +25,13 @@ func String(s sql.NullString) string {
 	return s.String
 }
 
+func ToNullString(s string) sql.NullString {
+	if s == "" {
+		return sql.NullString{Valid: false}
+	}
+	return sql.NullString{String: s, Valid: true}
+}
+
 func NullableFloat64(f sql.NullFloat64) *float64 {
 	if !f.Valid {
 		return nil
@@ -37,6 +44,14 @@ func Float64(f sql.NullFloat64) float64 {
 		return 0
 	}
 	return f.Float64
+}
+
+func ToNullInt64(f int64) sql.NullInt64 {
+	return sql.NullInt64{Int64: f, Valid: true}
+}
+
+func ToNullFloat64(f float64) sql.NullFloat64 {
+	return sql.NullFloat64{Float64: f, Valid: true}
 }
 
 func NullableInt64(i sql.NullInt64) *int64 {
@@ -58,6 +73,9 @@ func NullableBool(b sql.NullBool) *bool {
 		return nil
 	}
 	return &b.Bool
+}
+func ToNullBool(f bool) sql.NullBool {
+	return sql.NullBool{Bool: f, Valid: true}
 }
 
 func Bool(b sql.NullBool) bool {
@@ -95,11 +113,11 @@ func CheckOptVocab(w http.ResponseWriter, ctx context.Context, q *db.Queries, do
 	return CheckVocab(w, ctx, q, domain, *value)
 }
 
-func Filter[T any](slice []T, criteria func(T) bool) []T {
-	var matches []T
-	for _, item := range slice {
-		if criteria(item) {
-			matches = append(matches, item)
+func Filter[T any](slice []T, criteria func(T) bool) []*T {
+	var matches []*T
+	for i := range slice {
+		if criteria(slice[i]) {
+			matches = append(matches, &slice[i])
 		}
 	}
 	return matches

@@ -33,19 +33,22 @@ type CourseHole struct {
 }
 
 type Hole struct {
-	ID           int64
-	RoundID      int64
-	CourseHoleID int64
-	HoleNumber   int64
-	FlagPosition sql.NullString
-	Score        sql.NullInt64
-	Points       sql.NullInt64
-	Putts        sql.NullInt64
-	FairwayHit   sql.NullBool
-	Gir          sql.NullBool
-	ScrambleSave sql.NullBool
-	Penalty      sql.NullBool
-	Completed    sql.NullBool
+	ID             int64
+	RoundID        int64
+	CourseHoleID   int64
+	HoleNumber     int64
+	DailyDistance  int64
+	FlagPosition   sql.NullString
+	Score          sql.NullInt64
+	Points         sql.NullInt64
+	Putts          sql.NullInt64
+	FairwayHit     sql.NullBool
+	Gir            sql.NullBool
+	ScrambleSave   sql.NullBool
+	Penalty        sql.NullBool
+	PenaltyStrokes sql.NullInt64
+	Completed      sql.NullBool
+	Wiped          sql.NullBool
 }
 
 type HolePointsOfInterest struct {
@@ -101,6 +104,7 @@ type Round struct {
 type Shot struct {
 	ID                    int64
 	HoleID                int64
+	DistanceToPin         int64
 	ShotNumber            int64
 	ShotType              string
 	Club                  sql.NullString

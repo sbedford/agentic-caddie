@@ -102,23 +102,27 @@ func (q *Queries) CreateCourseHole(ctx context.Context, arg CreateCourseHolePara
 
 const createHole = `-- name: CreateHole :execresult
 INSERT INTO holes (
-    round_id, course_hole_id, hole_number, flag_position,
-    score, points, putts, gir, scramble_save, penalty
+    round_id, course_hole_id, hole_number,daily_distance, flag_position,
+    score, points, putts, gir, scramble_save, penalty, penalty_strokes, wiped, completed
 )
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?,?,?)
 `
 
 type CreateHoleParams struct {
-	RoundID      int64
-	CourseHoleID int64
-	HoleNumber   int64
-	FlagPosition sql.NullString
-	Score        sql.NullInt64
-	Points       sql.NullInt64
-	Putts        sql.NullInt64
-	Gir          sql.NullBool
-	ScrambleSave sql.NullBool
-	Penalty      sql.NullBool
+	RoundID        int64
+	CourseHoleID   int64
+	HoleNumber     int64
+	DailyDistance  int64
+	FlagPosition   sql.NullString
+	Score          sql.NullInt64
+	Points         sql.NullInt64
+	Putts          sql.NullInt64
+	Gir            sql.NullBool
+	ScrambleSave   sql.NullBool
+	Penalty        sql.NullBool
+	PenaltyStrokes sql.NullInt64
+	Wiped          sql.NullBool
+	Completed      sql.NullBool
 }
 
 func (q *Queries) CreateHole(ctx context.Context, arg CreateHoleParams) (sql.Result, error) {
@@ -126,6 +130,7 @@ func (q *Queries) CreateHole(ctx context.Context, arg CreateHoleParams) (sql.Res
 		arg.RoundID,
 		arg.CourseHoleID,
 		arg.HoleNumber,
+		arg.DailyDistance,
 		arg.FlagPosition,
 		arg.Score,
 		arg.Points,
@@ -133,6 +138,9 @@ func (q *Queries) CreateHole(ctx context.Context, arg CreateHoleParams) (sql.Res
 		arg.Gir,
 		arg.ScrambleSave,
 		arg.Penalty,
+		arg.PenaltyStrokes,
+		arg.Wiped,
+		arg.Completed,
 	)
 }
 
@@ -185,9 +193,9 @@ func (q *Queries) CreatePlayer(ctx context.Context, arg CreatePlayerParams) (sql
 const createRound = `-- name: CreateRound :execresult
 INSERT INTO rounds (
     player_id, course_id, played_at, tees, daily_handicap, round_type, competition_type,
-    total_score, total_points, total_putts, created_at
+    total_score, total_points, total_putts, completed, created_at
 )
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
 `
 
 type CreateRoundParams struct {
@@ -201,6 +209,7 @@ type CreateRoundParams struct {
 	TotalScore      sql.NullInt64
 	TotalPoints     sql.NullInt64
 	TotalPutts      sql.NullInt64
+	Completed       bool
 }
 
 func (q *Queries) CreateRound(ctx context.Context, arg CreateRoundParams) (sql.Result, error) {
@@ -215,20 +224,22 @@ func (q *Queries) CreateRound(ctx context.Context, arg CreateRoundParams) (sql.R
 		arg.TotalScore,
 		arg.TotalPoints,
 		arg.TotalPutts,
+		arg.Completed,
 	)
 }
 
 const createShot = `-- name: CreateShot :execresult
 INSERT INTO shots (
-    hole_id, shot_number, shot_type, club,
+    hole_id, shot_number, distance_to_pin, shot_type, club,
     result, miss, strike_quality, source, pre_shot_recommendation,completed
 )
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?,?)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?,?,?)
 `
 
 type CreateShotParams struct {
 	HoleID                int64
 	ShotNumber            int64
+	DistanceToPin         int64
 	ShotType              string
 	Club                  sql.NullString
 	Result                sql.NullString
@@ -243,6 +254,7 @@ func (q *Queries) CreateShot(ctx context.Context, arg CreateShotParams) (sql.Res
 	return q.db.ExecContext(ctx, createShot,
 		arg.HoleID,
 		arg.ShotNumber,
+		arg.DistanceToPin,
 		arg.ShotType,
 		arg.Club,
 		arg.Result,
@@ -726,7 +738,7 @@ func (q *Queries) GetCourseHoleByID(ctx context.Context, id int64) (CourseHole, 
 }
 
 const getHoleByID = `-- name: GetHoleByID :one
-SELECT id, round_id, course_hole_id, hole_number, flag_position, score, points, putts, fairway_hit, gir, scramble_save, penalty, completed
+SELECT id, round_id, course_hole_id, hole_number, daily_distance, flag_position, score, points, putts, fairway_hit, gir, scramble_save, penalty, penalty_strokes, completed, wiped
 FROM holes
 WHERE id = ?
 `
@@ -739,6 +751,7 @@ func (q *Queries) GetHoleByID(ctx context.Context, id int64) (Hole, error) {
 		&i.RoundID,
 		&i.CourseHoleID,
 		&i.HoleNumber,
+		&i.DailyDistance,
 		&i.FlagPosition,
 		&i.Score,
 		&i.Points,
@@ -747,13 +760,15 @@ func (q *Queries) GetHoleByID(ctx context.Context, id int64) (Hole, error) {
 		&i.Gir,
 		&i.ScrambleSave,
 		&i.Penalty,
+		&i.PenaltyStrokes,
 		&i.Completed,
+		&i.Wiped,
 	)
 	return i, err
 }
 
 const getHoleByRoundAndNumber = `-- name: GetHoleByRoundAndNumber :one
-SELECT id, round_id, course_hole_id, hole_number, flag_position, score, points, putts, fairway_hit, gir, scramble_save, penalty, completed
+SELECT id, round_id, course_hole_id, hole_number, daily_distance, flag_position, score, points, putts, fairway_hit, gir, scramble_save, penalty, penalty_strokes, completed, wiped
 FROM holes
 WHERE round_id    = ?
   AND hole_number = ?
@@ -772,6 +787,7 @@ func (q *Queries) GetHoleByRoundAndNumber(ctx context.Context, arg GetHoleByRoun
 		&i.RoundID,
 		&i.CourseHoleID,
 		&i.HoleNumber,
+		&i.DailyDistance,
 		&i.FlagPosition,
 		&i.Score,
 		&i.Points,
@@ -780,7 +796,9 @@ func (q *Queries) GetHoleByRoundAndNumber(ctx context.Context, arg GetHoleByRoun
 		&i.Gir,
 		&i.ScrambleSave,
 		&i.Penalty,
+		&i.PenaltyStrokes,
 		&i.Completed,
+		&i.Wiped,
 	)
 	return i, err
 }
@@ -846,7 +864,7 @@ func (q *Queries) GetHoleStats(ctx context.Context, arg GetHoleStatsParams) ([]G
 }
 
 const getHolesByCourse = `-- name: GetHolesByCourse :many
-SELECT t.Name as TeeName, ch.hole_number, th.Distance, th.Par, th.stroke_index
+SELECT th.ID as TeeHoleID, ch.ID as CourseHoleID, t.Name as TeeName, ch.hole_number, th.Distance, th.Par, th.stroke_index
 FROM course_holes ch
 INNER JOIN courses c ON c.ID = ?1 AND c.ID = ch.course_id
 INNER JOIN tees t ON c.ID=T.course_id
@@ -854,11 +872,13 @@ INNER JOIN tee_holes th ON th.tee_Id = t.ID AND th.course_hole_id = ch.ID
 `
 
 type GetHolesByCourseRow struct {
-	Teename     string
-	HoleNumber  int64
-	Distance    int64
-	Par         int64
-	StrokeIndex sql.NullInt64
+	Teeholeid    int64
+	Courseholeid int64
+	Teename      string
+	HoleNumber   int64
+	Distance     int64
+	Par          int64
+	StrokeIndex  sql.NullInt64
 }
 
 func (q *Queries) GetHolesByCourse(ctx context.Context, courseid int64) ([]GetHolesByCourseRow, error) {
@@ -871,6 +891,8 @@ func (q *Queries) GetHolesByCourse(ctx context.Context, courseid int64) ([]GetHo
 	for rows.Next() {
 		var i GetHolesByCourseRow
 		if err := rows.Scan(
+			&i.Teeholeid,
+			&i.Courseholeid,
 			&i.Teename,
 			&i.HoleNumber,
 			&i.Distance,
@@ -891,7 +913,7 @@ func (q *Queries) GetHolesByCourse(ctx context.Context, courseid int64) ([]GetHo
 }
 
 const getHolesByCourseAndTee = `-- name: GetHolesByCourseAndTee :many
-SELECT ch.hole_number, th.Distance, th.Par, th.stroke_index
+SELECT th.ID as TeeHoleID, ch.ID as CourseHoleID, ch.hole_number, th.Distance, th.Par, th.stroke_index
 FROM course_holes ch
 INNER JOIN courses c ON c.ID = ?1 AND c.ID = ch.course_id
 INNER JOIN tees t ON c.ID=T.course_id AND t.Name=?2
@@ -904,10 +926,12 @@ type GetHolesByCourseAndTeeParams struct {
 }
 
 type GetHolesByCourseAndTeeRow struct {
-	HoleNumber  int64
-	Distance    int64
-	Par         int64
-	StrokeIndex sql.NullInt64
+	Teeholeid    int64
+	Courseholeid int64
+	HoleNumber   int64
+	Distance     int64
+	Par          int64
+	StrokeIndex  sql.NullInt64
 }
 
 func (q *Queries) GetHolesByCourseAndTee(ctx context.Context, arg GetHolesByCourseAndTeeParams) ([]GetHolesByCourseAndTeeRow, error) {
@@ -920,6 +944,8 @@ func (q *Queries) GetHolesByCourseAndTee(ctx context.Context, arg GetHolesByCour
 	for rows.Next() {
 		var i GetHolesByCourseAndTeeRow
 		if err := rows.Scan(
+			&i.Teeholeid,
+			&i.Courseholeid,
 			&i.HoleNumber,
 			&i.Distance,
 			&i.Par,
@@ -1087,7 +1113,7 @@ func (q *Queries) GetRoundByPlayerAndDate(ctx context.Context, arg GetRoundByPla
 }
 
 const getShotByHoleAndNumber = `-- name: GetShotByHoleAndNumber :one
-SELECT id, hole_id, shot_number, shot_type, club, result, miss, strike_quality, pre_shot_recommendation, completed, source
+SELECT id, hole_id, distance_to_pin, shot_number, shot_type, club, result, miss, strike_quality, pre_shot_recommendation, completed, source
 FROM shots
 WHERE hole_id    = ?
   AND shot_number = ?
@@ -1104,6 +1130,7 @@ func (q *Queries) GetShotByHoleAndNumber(ctx context.Context, arg GetShotByHoleA
 	err := row.Scan(
 		&i.ID,
 		&i.HoleID,
+		&i.DistanceToPin,
 		&i.ShotNumber,
 		&i.ShotType,
 		&i.Club,
@@ -1118,7 +1145,7 @@ func (q *Queries) GetShotByHoleAndNumber(ctx context.Context, arg GetShotByHoleA
 }
 
 const getShotByID = `-- name: GetShotByID :one
-SELECT id, hole_id, shot_number, shot_type, club, result, miss, strike_quality, pre_shot_recommendation, completed, source
+SELECT id, hole_id, distance_to_pin, shot_number, shot_type, club, result, miss, strike_quality, pre_shot_recommendation, completed, source
 FROM shots
 WHERE id = ?
 `
@@ -1129,31 +1156,7 @@ func (q *Queries) GetShotByID(ctx context.Context, id int64) (Shot, error) {
 	err := row.Scan(
 		&i.ID,
 		&i.HoleID,
-		&i.ShotNumber,
-		&i.ShotType,
-		&i.Club,
-		&i.Result,
-		&i.Miss,
-		&i.StrikeQuality,
-		&i.PreShotRecommendation,
-		&i.Completed,
-		&i.Source,
-	)
-	return i, err
-}
-
-const getShotsByRound = `-- name: GetShotsByRound :one
-SELECT s.id, s.hole_id, s.shot_number, s.shot_type, s.club, s.result, s.miss, s.strike_quality, s.pre_shot_recommendation, s.completed, s.source
-FROM shots s
-INNER JOIN holes h ON h.ID = s.hole_id AND h.round_id=?
-`
-
-func (q *Queries) GetShotsByRound(ctx context.Context, roundID int64) (Shot, error) {
-	row := q.db.QueryRowContext(ctx, getShotsByRound, roundID)
-	var i Shot
-	err := row.Scan(
-		&i.ID,
-		&i.HoleID,
+		&i.DistanceToPin,
 		&i.ShotNumber,
 		&i.ShotType,
 		&i.Club,
@@ -1443,6 +1446,50 @@ func (q *Queries) ListActiveClubsByPlayer(ctx context.Context, playerID int64) (
 	return items, nil
 }
 
+const listActiveRoundsByPlayer = `-- name: ListActiveRoundsByPlayer :many
+SELECT id, player_id, course_id, played_at, daily_handicap, tees, round_type, competition_type, total_score, total_points, total_putts, completed, created_at
+FROM rounds
+WHERE player_id = ? AND Completed=FALSE
+ORDER BY played_at DESC
+`
+
+func (q *Queries) ListActiveRoundsByPlayer(ctx context.Context, playerID int64) ([]Round, error) {
+	rows, err := q.db.QueryContext(ctx, listActiveRoundsByPlayer, playerID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Round
+	for rows.Next() {
+		var i Round
+		if err := rows.Scan(
+			&i.ID,
+			&i.PlayerID,
+			&i.CourseID,
+			&i.PlayedAt,
+			&i.DailyHandicap,
+			&i.Tees,
+			&i.RoundType,
+			&i.CompetitionType,
+			&i.TotalScore,
+			&i.TotalPoints,
+			&i.TotalPutts,
+			&i.Completed,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listClubsByPlayer = `-- name: ListClubsByPlayer :many
 
 SELECT id, player_id, club_name, added_date, removed_date,
@@ -1668,7 +1715,7 @@ func (q *Queries) ListCourses(ctx context.Context) ([]Course, error) {
 
 const listHolesByRound = `-- name: ListHolesByRound :many
 
-SELECT id, round_id, course_hole_id, hole_number, flag_position, score, points, putts, fairway_hit, gir, scramble_save, penalty, completed
+SELECT id, round_id, course_hole_id, hole_number, daily_distance, flag_position, score, points, putts, fairway_hit, gir, scramble_save, penalty, penalty_strokes, completed, wiped
 FROM holes
 WHERE round_id = ?
 ORDER BY hole_number
@@ -1692,6 +1739,7 @@ func (q *Queries) ListHolesByRound(ctx context.Context, roundID int64) ([]Hole, 
 			&i.RoundID,
 			&i.CourseHoleID,
 			&i.HoleNumber,
+			&i.DailyDistance,
 			&i.FlagPosition,
 			&i.Score,
 			&i.Points,
@@ -1700,7 +1748,9 @@ func (q *Queries) ListHolesByRound(ctx context.Context, roundID int64) ([]Hole, 
 			&i.Gir,
 			&i.ScrambleSave,
 			&i.Penalty,
+			&i.PenaltyStrokes,
 			&i.Completed,
+			&i.Wiped,
 		); err != nil {
 			return nil, err
 		}
@@ -1896,6 +1946,50 @@ func (q *Queries) ListRounds(ctx context.Context) ([]Round, error) {
 	return items, nil
 }
 
+const listRoundsByPlayer = `-- name: ListRoundsByPlayer :many
+SELECT id, player_id, course_id, played_at, daily_handicap, tees, round_type, competition_type, total_score, total_points, total_putts, completed, created_at
+FROM rounds
+WHERE player_id = ?
+ORDER BY played_at DESC
+`
+
+func (q *Queries) ListRoundsByPlayer(ctx context.Context, playerID int64) ([]Round, error) {
+	rows, err := q.db.QueryContext(ctx, listRoundsByPlayer, playerID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Round
+	for rows.Next() {
+		var i Round
+		if err := rows.Scan(
+			&i.ID,
+			&i.PlayerID,
+			&i.CourseID,
+			&i.PlayedAt,
+			&i.DailyHandicap,
+			&i.Tees,
+			&i.RoundType,
+			&i.CompetitionType,
+			&i.TotalScore,
+			&i.TotalPoints,
+			&i.TotalPutts,
+			&i.Completed,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listRoundsByPlayerAndCourse = `-- name: ListRoundsByPlayerAndCourse :many
 SELECT id, player_id, course_id, played_at, daily_handicap, tees, round_type, competition_type, total_score, total_points, total_putts, completed, created_at
 FROM rounds
@@ -1948,7 +2042,7 @@ func (q *Queries) ListRoundsByPlayerAndCourse(ctx context.Context, arg ListRound
 
 const listShotsByHole = `-- name: ListShotsByHole :many
 
-SELECT id, hole_id, shot_number, shot_type, club, result, miss, strike_quality, pre_shot_recommendation, completed, source
+SELECT id, hole_id, distance_to_pin, shot_number, shot_type, club, result, miss, strike_quality, pre_shot_recommendation, completed, source
 FROM shots
 WHERE hole_id = ?
 ORDER BY shot_number
@@ -1970,6 +2064,7 @@ func (q *Queries) ListShotsByHole(ctx context.Context, holeID int64) ([]Shot, er
 		if err := rows.Scan(
 			&i.ID,
 			&i.HoleID,
+			&i.DistanceToPin,
 			&i.ShotNumber,
 			&i.ShotType,
 			&i.Club,
@@ -1994,7 +2089,7 @@ func (q *Queries) ListShotsByHole(ctx context.Context, holeID int64) ([]Shot, er
 }
 
 const listShotsByHoleAndType = `-- name: ListShotsByHoleAndType :many
-SELECT id, hole_id, shot_number, shot_type, club, result, miss, strike_quality, pre_shot_recommendation, completed, source
+SELECT id, hole_id, distance_to_pin, shot_number, shot_type, club, result, miss, strike_quality, pre_shot_recommendation, completed, source
 FROM shots
 WHERE hole_id   = ?
   AND shot_type = ?
@@ -2018,6 +2113,50 @@ func (q *Queries) ListShotsByHoleAndType(ctx context.Context, arg ListShotsByHol
 		if err := rows.Scan(
 			&i.ID,
 			&i.HoleID,
+			&i.DistanceToPin,
+			&i.ShotNumber,
+			&i.ShotType,
+			&i.Club,
+			&i.Result,
+			&i.Miss,
+			&i.StrikeQuality,
+			&i.PreShotRecommendation,
+			&i.Completed,
+			&i.Source,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listShotsByRound = `-- name: ListShotsByRound :many
+SELECT s.id, s.hole_id, s.distance_to_pin, s.shot_number, s.shot_type, s.club, s.result, s.miss, s.strike_quality, s.pre_shot_recommendation, s.completed, s.source
+FROM shots s
+INNER JOIN Holes h ON s.hole_id = h.ID and h.round_id = ?
+ORDER BY hole_id, shot_number
+`
+
+func (q *Queries) ListShotsByRound(ctx context.Context, roundID int64) ([]Shot, error) {
+	rows, err := q.db.QueryContext(ctx, listShotsByRound, roundID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Shot
+	for rows.Next() {
+		var i Shot
+		if err := rows.Scan(
+			&i.ID,
+			&i.HoleID,
+			&i.DistanceToPin,
 			&i.ShotNumber,
 			&i.ShotType,
 			&i.Club,
@@ -2221,35 +2360,47 @@ func (q *Queries) UpdateCourseHoleCoordinates(ctx context.Context, arg UpdateCou
 const updateHole = `-- name: UpdateHole :exec
 UPDATE holes
 SET flag_position  = ?,
+    daily_distance = ?,
     score          = ?,
     points         = ?,
     putts          = ?,
     gir            = ?,
     scramble_save  = ?,
-    penalty        = ?
+    penalty        = ?,
+    penalty_strokes  = ?,
+    wiped        = ?,
+    completed        = ?
 WHERE id = ?
 `
 
 type UpdateHoleParams struct {
-	FlagPosition sql.NullString
-	Score        sql.NullInt64
-	Points       sql.NullInt64
-	Putts        sql.NullInt64
-	Gir          sql.NullBool
-	ScrambleSave sql.NullBool
-	Penalty      sql.NullBool
-	ID           int64
+	FlagPosition   sql.NullString
+	DailyDistance  int64
+	Score          sql.NullInt64
+	Points         sql.NullInt64
+	Putts          sql.NullInt64
+	Gir            sql.NullBool
+	ScrambleSave   sql.NullBool
+	Penalty        sql.NullBool
+	PenaltyStrokes sql.NullInt64
+	Wiped          sql.NullBool
+	Completed      sql.NullBool
+	ID             int64
 }
 
 func (q *Queries) UpdateHole(ctx context.Context, arg UpdateHoleParams) error {
 	_, err := q.db.ExecContext(ctx, updateHole,
 		arg.FlagPosition,
+		arg.DailyDistance,
 		arg.Score,
 		arg.Points,
 		arg.Putts,
 		arg.Gir,
 		arg.ScrambleSave,
 		arg.Penalty,
+		arg.PenaltyStrokes,
+		arg.Wiped,
+		arg.Completed,
 		arg.ID,
 	)
 	return err
@@ -2309,6 +2460,34 @@ func (q *Queries) UpdatePlayerHandicap(ctx context.Context, arg UpdatePlayerHand
 	return err
 }
 
+const updateRound = `-- name: UpdateRound :exec
+UPDATE rounds 
+SET  total_score=?,
+     total_points=?,
+     total_putts=?, 
+     completed =?
+WHERE ID=?
+`
+
+type UpdateRoundParams struct {
+	TotalScore  sql.NullInt64
+	TotalPoints sql.NullInt64
+	TotalPutts  sql.NullInt64
+	Completed   bool
+	ID          int64
+}
+
+func (q *Queries) UpdateRound(ctx context.Context, arg UpdateRoundParams) error {
+	_, err := q.db.ExecContext(ctx, updateRound,
+		arg.TotalScore,
+		arg.TotalPoints,
+		arg.TotalPutts,
+		arg.Completed,
+		arg.ID,
+	)
+	return err
+}
+
 const updateRoundTotals = `-- name: UpdateRoundTotals :exec
 UPDATE rounds
 SET total_score  = (SELECT SUM(score)  FROM holes WHERE round_id = rounds.id),
@@ -2325,7 +2504,8 @@ func (q *Queries) UpdateRoundTotals(ctx context.Context, id int64) error {
 
 const updateShot = `-- name: UpdateShot :exec
 UPDATE shots
-SET shot_type     = ?,
+SET distance_to_pin =?,
+    shot_type     = ?,
     club          = ?,
     result        = ?,
     miss          = ?,
@@ -2337,6 +2517,7 @@ WHERE id = ?
 `
 
 type UpdateShotParams struct {
+	DistanceToPin         int64
 	ShotType              string
 	Club                  sql.NullString
 	Result                sql.NullString
@@ -2350,6 +2531,7 @@ type UpdateShotParams struct {
 
 func (q *Queries) UpdateShot(ctx context.Context, arg UpdateShotParams) error {
 	_, err := q.db.ExecContext(ctx, updateShot,
+		arg.DistanceToPin,
 		arg.ShotType,
 		arg.Club,
 		arg.Result,
