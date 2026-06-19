@@ -61,9 +61,17 @@ func main() {
 		},
 	}
 
-	result, err := agent.GetAdvice(context.Background(), req)
-	if err != nil {
-		log.Fatalf("agent error: %v", err)
+	response := agent.GetAdvice(context.Background(), req)
+	if response.Err != nil {
+		log.Fatalf("agent error: %v", response.Err)
 	}
-	log.Println(result)
+
+	log.Println(response.Response)
+	fmt.Printf("------------------------\n")
+	fmt.Printf("Total Input Tokens: %d\n", response.Usage.TotalInputTokens)
+	fmt.Printf("Total Output Tokens: %d\n", response.Usage.TotalOutputTokens)
+	fmt.Printf("Total Cache Create Tokens: %d\n", response.Usage.TotalCacheCreationInputTokens)
+	fmt.Printf("Total Cache Read Tokens: %d\n", response.Usage.TotalCacheReadInputTokens)
+	fmt.Printf("------------------------\n")
+
 }

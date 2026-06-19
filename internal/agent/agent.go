@@ -18,6 +18,12 @@ type Agent struct {
 	handlers     map[string]ToolHandler
 }
 
+type AgentResponse struct {
+	Usage    TokenUsage
+	Response string
+	Err      error
+}
+
 func NewAgent(client anthropic.Client, systemPrompt string) *Agent {
 	return &Agent{
 		client:       client,
@@ -33,10 +39,11 @@ func (a *Agent) RegisterTool(def anthropic.ToolUnionParam, name string, h ToolHa
 
 // Run executes the full agent loop for a single user request.
 // contextBlock is your game-model text, prepended to the user message.
-func (a *Agent) Run(ctx context.Context, contextBlock, userMessage string) (string, error) {
+func (a *Agent) Run(ctx context.Context, contextBlock, userMessage string) AgentResponse {
+
+	agentTokens := TokenUsage{}
 
 	fmt.Printf("Received request [%f] \n", userMessage)
-
 	fmt.Printf("Context block [%f] \n", contextBlock)
 
 	messages := []anthropic.MessageParam{
@@ -57,8 +64,14 @@ func (a *Agent) Run(ctx context.Context, contextBlock, userMessage string) (stri
 			Tools:    a.tools,
 		})
 		if err != nil {
-			return "", fmt.Errorf("messages.new: %w", err)
+			return AgentResponse{
+				Response: "",
+				Err:      fmt.Errorf("messages.new: %w", err),
+				Usage:    agentTokens,
+			}
 		}
+
+		agentTokens.AddUsage(resp.Usage)
 
 		// Always append the model's turn before deciding what to do with it.
 		messages = append(messages, resp.ToParam())
@@ -71,7 +84,12 @@ func (a *Agent) Run(ctx context.Context, contextBlock, userMessage string) (stri
 					out += tb.Text
 				}
 			}
-			return out, nil
+
+			return AgentResponse{
+				Response: out,
+				Err:      nil,
+				Usage:    agentTokens,
+			}
 		}
 
 		// StopReason == tool_use: dispatch every tool_use block, collect results.

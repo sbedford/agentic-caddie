@@ -185,7 +185,7 @@ type GetAdviceRequest struct {
 	ScopeForAdvice models.PlayedHole
 }
 
-func GetAdvice(ctx context.Context, req GetAdviceRequest) (string, error) {
+func GetAdvice(ctx context.Context, req GetAdviceRequest) AgentResponse {
 	client := anthropic.NewClient(option.WithAPIKey(os.Getenv("ANTHROPIC_API_KEY")))
 	agent := NewAgent(client, SystemPrompt)
 
