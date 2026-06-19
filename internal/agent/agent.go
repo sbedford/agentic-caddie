@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 
 	"github.com/anthropics/anthropic-sdk-go"
 )
@@ -43,8 +44,8 @@ func (a *Agent) Run(ctx context.Context, contextBlock, userMessage string) Agent
 
 	agentTokens := TokenUsage{}
 
-	fmt.Printf("Received request [%f] \n", userMessage)
-	fmt.Printf("Context block [%f] \n", contextBlock)
+	log.Println("Received request: ", userMessage)
+	log.Println("Context block: \n", contextBlock)
 
 	messages := []anthropic.MessageParam{
 		anthropic.NewUserMessage(
@@ -73,7 +74,6 @@ func (a *Agent) Run(ctx context.Context, contextBlock, userMessage string) Agent
 
 		agentTokens.AddUsage(resp.Usage)
 
-		// Always append the model's turn before deciding what to do with it.
 		messages = append(messages, resp.ToParam())
 
 		if resp.StopReason != anthropic.StopReasonToolUse {
@@ -110,7 +110,7 @@ func (a *Agent) Run(ctx context.Context, contextBlock, userMessage string) Agent
 				isError = true
 			} else {
 
-				fmt.Printf("Calling tool [%v] input [%s]\n", tu.Name, tu.Input)
+				log.Println("Calling tool [", tu.Name, "]")
 
 				out, err := handler(ctx, tu.Input)
 				if err != nil {
@@ -120,7 +120,7 @@ func (a *Agent) Run(ctx context.Context, contextBlock, userMessage string) Agent
 					resultText = out
 				}
 			}
-			fmt.Printf("Got response [%v] from tool [%v]\n", resultText, tu.Name)
+			log.Println("Got response [", resultText, "] from tool [", tu.Name, "]")
 			toolResults = append(toolResults, anthropic.NewToolResultBlock(tu.ID, resultText, isError))
 		}
 

@@ -1,7 +1,7 @@
 package agent
 
 import (
-	"fmt"
+	"log"
 
 	"github.com/anthropics/anthropic-sdk-go"
 )
@@ -23,8 +23,8 @@ func (t *TokenUsage) AddUsage(u anthropic.Usage) {
 }
 
 func (t *TokenUsage) logUsage(u anthropic.Usage) {
-	fmt.Printf("Input Tokens: %d\n", u.InputTokens)
-	fmt.Printf("Output Tokens: %d\n", u.OutputTokens)
-	fmt.Printf("Cache Create Tokens: %d\n", u.CacheCreationInputTokens)
-	fmt.Printf("Cache Read Tokens: %d\n", u.CacheReadInputTokens)
+	log.Println("Input Tokens: ", u.InputTokens)
+	log.Println("Output Tokens: ", u.OutputTokens)
+	log.Println("Cache Create Tokens: ", u.CacheCreationInputTokens)
+	log.Println("Cache Read Tokens: ", u.CacheReadInputTokens)
 }

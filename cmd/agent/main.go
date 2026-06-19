@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"database/sql"
-	"fmt"
 	"log"
 
 	"github.com/sbedford/agentic-caddie/internal/agent"
@@ -32,13 +31,13 @@ func main() {
 
 	golfer, err := playerService.GetPlayer(1)
 	if err != nil {
-		fmt.Errorf("LoadPLayer failed: %w", err)
+		log.Println("LoadPLayer failed: ", err)
 		return
 	}
 
 	previousRounds, err := roundService.GetRoundsByPlayer(*golfer)
 	if err != nil {
-		fmt.Errorf("GetRoundsByPlayer failed: %w", err)
+		log.Println("GetRoundsByPlayer failed: ", err)
 		return
 	}
 
@@ -47,8 +46,6 @@ func main() {
 
 	currentRound, err := roundService.GetRoundById(currentRoundId)
 	nextHole := currentRound.Tee.GetHole(nextHoleNumber)
-
-	fmt.Printf("Tee [%v]", currentRound.Tee.Name)
 
 	req := agent.GetAdviceRequest{
 		Queries:      queries,
@@ -63,15 +60,16 @@ func main() {
 
 	response := agent.GetAdvice(context.Background(), req)
 	if response.Err != nil {
-		log.Fatalf("agent error: %v", response.Err)
+		log.Println("agent error: ", response.Err)
+		return
 	}
 
 	log.Println(response.Response)
-	fmt.Printf("------------------------\n")
-	fmt.Printf("Total Input Tokens: %d\n", response.Usage.TotalInputTokens)
-	fmt.Printf("Total Output Tokens: %d\n", response.Usage.TotalOutputTokens)
-	fmt.Printf("Total Cache Create Tokens: %d\n", response.Usage.TotalCacheCreationInputTokens)
-	fmt.Printf("Total Cache Read Tokens: %d\n", response.Usage.TotalCacheReadInputTokens)
-	fmt.Printf("------------------------\n")
+	log.Println("------------------------")
+	log.Println("Total Input Tokens:", response.Usage.TotalInputTokens)
+	log.Println("Total Output Tokens:", response.Usage.TotalOutputTokens)
+	log.Println("Total Cache Create Tokens:", response.Usage.TotalCacheCreationInputTokens)
+	log.Println("Total Cache Read Tokens:", response.Usage.TotalCacheReadInputTokens)
+	log.Println("------------------------")
 
 }

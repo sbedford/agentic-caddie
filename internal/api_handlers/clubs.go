@@ -427,7 +427,7 @@ func (h ClubsHandler) UpdateClubDistances(w http.ResponseWriter, r *http.Request
 	}
 
 	if err = h.Queries.UpdateClubDistances(r.Context(), params); err != nil {
-		log.Printf("failed to update club distances: %v", err)
+		log.Printf("failed to update club distances: ", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
