@@ -23,7 +23,7 @@ var GetHoleLayoutToolDef = anthropic.ToolUnionParam{
 				},
 				"tee_name": map[string]any{
 					"type":        "string",
-					"description": "Tee name, typically Black or White",
+					"description": "The name of the tee's being played.",
 				},
 				"hole_num": map[string]any{
 					"type":        "integer",
