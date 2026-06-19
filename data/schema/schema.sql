@@ -160,7 +160,7 @@ INSERT INTO vocabulary (domain, value, label, sort_order) VALUES
 -- ============================================================
 
 CREATE TABLE courses (
-    id              INTEGER PRIMARY KEY,
+    id              INTEGER PRIMARY KEY ,
     name            TEXT NOT NULL UNIQUE,
     golf_api_id     TEXT UNIQUE,
     created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -169,7 +169,7 @@ CREATE TABLE courses (
 -- One row per tee colour per course
 -- slope_rating and course_rating are tee-specific, not course-level
 CREATE TABLE tees (
-    id              INTEGER PRIMARY KEY,
+    id              INTEGER PRIMARY KEY ,
     course_id       INTEGER NOT NULL REFERENCES courses(id),
     name            TEXT NOT NULL,          -- 'white', 'black', 'red', 'gold'
     slope_rating    INTEGER,
@@ -181,7 +181,7 @@ CREATE TABLE tees (
 -- Hole geography — independent of tee
 -- Green coordinates are the same regardless of which tee is played
 CREATE TABLE course_holes (
-    id                  INTEGER PRIMARY KEY,
+    id                  INTEGER PRIMARY KEY ,
     course_id           INTEGER NOT NULL REFERENCES courses(id),
     hole_number         INTEGER NOT NULL,
     green_centre_lat    REAL,
@@ -194,7 +194,7 @@ CREATE TABLE course_holes (
 -- Par and stroke index can differ by tee (rare but valid)
 -- Tee coordinates recorded here as they are tee-specific
 CREATE TABLE tee_holes (
-    id                  INTEGER PRIMARY KEY,
+    id                  INTEGER PRIMARY KEY ,
     course_hole_id      INTEGER NOT NULL REFERENCES course_holes(id),
     tee_id              INTEGER NOT NULL REFERENCES tees(id),
     par                 INTEGER NOT NULL,
@@ -226,7 +226,7 @@ CREATE TABLE tee_holes (
 --   'elevation'      → significant elevation change affecting club selection
 --   'false_front'    → green feature causing roll-off
 CREATE TABLE hole_points_of_interest (
-    id                  INTEGER PRIMARY KEY,
+    id                  INTEGER PRIMARY KEY ,
     course_hole_id      INTEGER NOT NULL REFERENCES course_holes(id),
     specific_tee        TEXT,               -- null = all tees
                                             -- 'white', 'black' = tee-specific only
@@ -245,7 +245,7 @@ CREATE TABLE hole_points_of_interest (
 -- ============================================================
 
 CREATE TABLE players (
-    id              INTEGER PRIMARY KEY,
+    id              INTEGER PRIMARY KEY ,
     name            TEXT NOT NULL UNIQUE,
     handicap        REAL,
     updated_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -255,7 +255,7 @@ CREATE TABLE players (
 -- added_date/removed_date scope distance calculations to the correct equipment era
 -- A new club gets a new row — old row gets removed_date set
 CREATE TABLE player_clubs (
-    id                  INTEGER PRIMARY KEY,
+    id                  INTEGER PRIMARY KEY ,
     player_id           INTEGER NOT NULL REFERENCES players(id),
     club_name           TEXT NOT NULL,      -- 'driver', '3_hybrid', '3i', '4i', '5i',
                                             --  '6i', '7i', '8i', '9i', 'pw', 'gw', 'sw'
@@ -292,7 +292,7 @@ CREATE TABLE player_clubs (
 --   add per-hole once Stage 1 is working (wind is orientation-dependent,
 --   round-level wind direction is not meaningful without hole bearing)
 CREATE TABLE rounds (
-    id              INTEGER PRIMARY KEY,
+    id              INTEGER PRIMARY KEY ,
     player_id       INTEGER NOT NULL REFERENCES players(id),
     course_id       INTEGER NOT NULL REFERENCES courses(id),
     played_at       DATE NOT NULL,
@@ -324,19 +324,21 @@ CREATE TABLE rounds (
 --
 -- penalty: any penalty stroke on the hole, regardless of where it occurred
 CREATE TABLE holes (
-    id                  INTEGER PRIMARY KEY,
+    id                  INTEGER PRIMARY KEY ,
     round_id            INTEGER NOT NULL REFERENCES rounds(id),
     course_hole_id      INTEGER NOT NULL REFERENCES course_holes(id),
     hole_number         INTEGER NOT NULL,
     flag_position       TEXT,
-    score               INTEGER,
-    points              INTEGER,
-    putts               INTEGER,
-    fairway_hit         BOOLEAN,
-    gir                 BOOLEAN,
-    scramble_save       BOOLEAN,
-    penalty             BOOLEAN,
-    completed       BOOLEAN DEFAULT FALSE,
+    score               INTEGER DEFAULT 0,
+    points              INTEGER DEFAULT 0,
+    putts               INTEGER DEFAULT 0,
+    fairway_hit         BOOLEAN DEFAULT FALSE,
+    gir                 BOOLEAN DEFAULT FALSE,
+    scramble_save       BOOLEAN DEFAULT FALSE,
+    penalty             BOOLEAN DEFAULT FALSE,
+    penalty_strokes     INTEGER DEFAULT 0,
+    completed           BOOLEAN DEFAULT FALSE,
+    wiped               BOOLEAN DEFAULT FALSE,
 
     UNIQUE(round_id, hole_number)
 );
@@ -386,7 +388,7 @@ CREATE TABLE holes (
 --   client_uuid (device-generated dedup key for offline sync)
 --   recorded_at, synced_at
 CREATE TABLE shots (
-    id              INTEGER PRIMARY KEY,
+    id              INTEGER PRIMARY KEY ,
     hole_id         INTEGER NOT NULL REFERENCES holes(id),
     shot_number     INTEGER NOT NULL,
     shot_type       TEXT NOT NULL,
@@ -411,7 +413,7 @@ CREATE TABLE shots (
 -- scope values: 'hole', 'round'
 -- scope_id: hole_id or round_id depending on scope
 CREATE TABLE commentary (
-    id              INTEGER PRIMARY KEY,
+    id              INTEGER PRIMARY KEY ,
     scope           TEXT NOT NULL,
     scope_id        INTEGER NOT NULL,
     content         TEXT NOT NULL,

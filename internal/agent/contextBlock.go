@@ -40,7 +40,7 @@ func toContextString(agentInput GetAdviceRequest) string {
 	sb.WriteString("\n## Current Round")
 
 	sb.WriteString("\nCourse Id: ")
-	sb.WriteString(strconv.FormatInt(agentInput.CurrentRound.Course.Id, 10))
+	sb.WriteString(strconv.FormatInt(agentInput.CurrentRound.Course.ID, 10))
 	sb.WriteString("\nTees: ")
 	sb.WriteString(agentInput.CurrentRound.Tee.Name)
 

@@ -446,9 +446,17 @@ WHERE player_id = ?
 -- name: CreateRound :execresult
 INSERT INTO rounds (
     player_id, course_id, played_at, tees, daily_handicap, round_type, competition_type,
-    total_score, total_points, total_putts, created_at
+    total_score, total_points, total_putts, completed, created_at
 )
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP);
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP);
+
+-- name: UpdateRound :exec
+UPDATE rounds 
+SET  total_score=?,
+     total_points=?,
+     total_putts=?, 
+     completed =?
+WHERE ID=?;
 
 -- name: UpdateRoundTotals :exec
 -- Called after holes are inserted/updated to refresh denormalised totals
@@ -488,9 +496,9 @@ WHERE round_id    = ?
 -- name: CreateHole :execresult
 INSERT INTO holes (
     round_id, course_hole_id, hole_number, flag_position,
-    score, points, putts, gir, scramble_save, penalty
+    score, points, putts, gir, scramble_save, penalty, penalty_strokes, wiped, completed
 )
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?,?,?);
 
 -- name: UpdateHole :exec
 UPDATE holes
@@ -500,7 +508,10 @@ SET flag_position  = ?,
     putts          = ?,
     gir            = ?,
     scramble_save  = ?,
-    penalty        = ?
+    penalty        = ?,
+    penalty_strokes  = ?,
+    wiped        = ?,
+    completed        = ?
 WHERE id = ?;
 
 -- name: DeleteHole :exec

@@ -103,22 +103,25 @@ func (q *Queries) CreateCourseHole(ctx context.Context, arg CreateCourseHolePara
 const createHole = `-- name: CreateHole :execresult
 INSERT INTO holes (
     round_id, course_hole_id, hole_number, flag_position,
-    score, points, putts, gir, scramble_save, penalty
+    score, points, putts, gir, scramble_save, penalty, penalty_strokes, wiped, completed
 )
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?,?,?)
 `
 
 type CreateHoleParams struct {
-	RoundID      int64
-	CourseHoleID int64
-	HoleNumber   int64
-	FlagPosition sql.NullString
-	Score        sql.NullInt64
-	Points       sql.NullInt64
-	Putts        sql.NullInt64
-	Gir          sql.NullBool
-	ScrambleSave sql.NullBool
-	Penalty      sql.NullBool
+	RoundID        int64
+	CourseHoleID   int64
+	HoleNumber     int64
+	FlagPosition   sql.NullString
+	Score          sql.NullInt64
+	Points         sql.NullInt64
+	Putts          sql.NullInt64
+	Gir            sql.NullBool
+	ScrambleSave   sql.NullBool
+	Penalty        sql.NullBool
+	PenaltyStrokes sql.NullInt64
+	Wiped          sql.NullBool
+	Completed      sql.NullBool
 }
 
 func (q *Queries) CreateHole(ctx context.Context, arg CreateHoleParams) (sql.Result, error) {
@@ -133,6 +136,9 @@ func (q *Queries) CreateHole(ctx context.Context, arg CreateHoleParams) (sql.Res
 		arg.Gir,
 		arg.ScrambleSave,
 		arg.Penalty,
+		arg.PenaltyStrokes,
+		arg.Wiped,
+		arg.Completed,
 	)
 }
 
@@ -185,9 +191,9 @@ func (q *Queries) CreatePlayer(ctx context.Context, arg CreatePlayerParams) (sql
 const createRound = `-- name: CreateRound :execresult
 INSERT INTO rounds (
     player_id, course_id, played_at, tees, daily_handicap, round_type, competition_type,
-    total_score, total_points, total_putts, created_at
+    total_score, total_points, total_putts, completed, created_at
 )
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
 `
 
 type CreateRoundParams struct {
@@ -201,6 +207,7 @@ type CreateRoundParams struct {
 	TotalScore      sql.NullInt64
 	TotalPoints     sql.NullInt64
 	TotalPutts      sql.NullInt64
+	Completed       bool
 }
 
 func (q *Queries) CreateRound(ctx context.Context, arg CreateRoundParams) (sql.Result, error) {
@@ -215,6 +222,7 @@ func (q *Queries) CreateRound(ctx context.Context, arg CreateRoundParams) (sql.R
 		arg.TotalScore,
 		arg.TotalPoints,
 		arg.TotalPutts,
+		arg.Completed,
 	)
 }
 
@@ -726,7 +734,7 @@ func (q *Queries) GetCourseHoleByID(ctx context.Context, id int64) (CourseHole, 
 }
 
 const getHoleByID = `-- name: GetHoleByID :one
-SELECT id, round_id, course_hole_id, hole_number, flag_position, score, points, putts, fairway_hit, gir, scramble_save, penalty, completed
+SELECT id, round_id, course_hole_id, hole_number, flag_position, score, points, putts, fairway_hit, gir, scramble_save, penalty, penalty_strokes, completed, wiped
 FROM holes
 WHERE id = ?
 `
@@ -747,13 +755,15 @@ func (q *Queries) GetHoleByID(ctx context.Context, id int64) (Hole, error) {
 		&i.Gir,
 		&i.ScrambleSave,
 		&i.Penalty,
+		&i.PenaltyStrokes,
 		&i.Completed,
+		&i.Wiped,
 	)
 	return i, err
 }
 
 const getHoleByRoundAndNumber = `-- name: GetHoleByRoundAndNumber :one
-SELECT id, round_id, course_hole_id, hole_number, flag_position, score, points, putts, fairway_hit, gir, scramble_save, penalty, completed
+SELECT id, round_id, course_hole_id, hole_number, flag_position, score, points, putts, fairway_hit, gir, scramble_save, penalty, penalty_strokes, completed, wiped
 FROM holes
 WHERE round_id    = ?
   AND hole_number = ?
@@ -780,7 +790,9 @@ func (q *Queries) GetHoleByRoundAndNumber(ctx context.Context, arg GetHoleByRoun
 		&i.Gir,
 		&i.ScrambleSave,
 		&i.Penalty,
+		&i.PenaltyStrokes,
 		&i.Completed,
+		&i.Wiped,
 	)
 	return i, err
 }
@@ -1668,7 +1680,7 @@ func (q *Queries) ListCourses(ctx context.Context) ([]Course, error) {
 
 const listHolesByRound = `-- name: ListHolesByRound :many
 
-SELECT id, round_id, course_hole_id, hole_number, flag_position, score, points, putts, fairway_hit, gir, scramble_save, penalty, completed
+SELECT id, round_id, course_hole_id, hole_number, flag_position, score, points, putts, fairway_hit, gir, scramble_save, penalty, penalty_strokes, completed, wiped
 FROM holes
 WHERE round_id = ?
 ORDER BY hole_number
@@ -1700,7 +1712,9 @@ func (q *Queries) ListHolesByRound(ctx context.Context, roundID int64) ([]Hole, 
 			&i.Gir,
 			&i.ScrambleSave,
 			&i.Penalty,
+			&i.PenaltyStrokes,
 			&i.Completed,
+			&i.Wiped,
 		); err != nil {
 			return nil, err
 		}
@@ -2226,19 +2240,26 @@ SET flag_position  = ?,
     putts          = ?,
     gir            = ?,
     scramble_save  = ?,
-    penalty        = ?
+    penalty        = ?,
+    penalty_strokes  = ?,
+    wiped        = ?,
+    completed        = ?
+
 WHERE id = ?
 `
 
 type UpdateHoleParams struct {
-	FlagPosition sql.NullString
-	Score        sql.NullInt64
-	Points       sql.NullInt64
-	Putts        sql.NullInt64
-	Gir          sql.NullBool
-	ScrambleSave sql.NullBool
-	Penalty      sql.NullBool
-	ID           int64
+	FlagPosition   sql.NullString
+	Score          sql.NullInt64
+	Points         sql.NullInt64
+	Putts          sql.NullInt64
+	Gir            sql.NullBool
+	ScrambleSave   sql.NullBool
+	Penalty        sql.NullBool
+	PenaltyStrokes sql.NullInt64
+	Wiped          sql.NullBool
+	Completed      sql.NullBool
+	ID             int64
 }
 
 func (q *Queries) UpdateHole(ctx context.Context, arg UpdateHoleParams) error {
@@ -2250,6 +2271,9 @@ func (q *Queries) UpdateHole(ctx context.Context, arg UpdateHoleParams) error {
 		arg.Gir,
 		arg.ScrambleSave,
 		arg.Penalty,
+		arg.PenaltyStrokes,
+		arg.Wiped,
+		arg.Completed,
 		arg.ID,
 	)
 	return err
@@ -2306,6 +2330,34 @@ type UpdatePlayerHandicapParams struct {
 
 func (q *Queries) UpdatePlayerHandicap(ctx context.Context, arg UpdatePlayerHandicapParams) error {
 	_, err := q.db.ExecContext(ctx, updatePlayerHandicap, arg.Handicap, arg.ID)
+	return err
+}
+
+const updateRound = `-- name: UpdateRound :exec
+UPDATE rounds 
+SET  total_score=?,
+     total_points=?,
+     total_putts=?, 
+     completed =?
+WHERE ID=?
+`
+
+type UpdateRoundParams struct {
+	TotalScore  sql.NullInt64
+	TotalPoints sql.NullInt64
+	TotalPutts  sql.NullInt64
+	Completed   bool
+	ID          int64
+}
+
+func (q *Queries) UpdateRound(ctx context.Context, arg UpdateRoundParams) error {
+	_, err := q.db.ExecContext(ctx, updateRound,
+		arg.TotalScore,
+		arg.TotalPoints,
+		arg.TotalPutts,
+		arg.Completed,
+		arg.ID,
+	)
 	return err
 }
 

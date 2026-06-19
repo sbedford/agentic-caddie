@@ -71,7 +71,7 @@ INSERT INTO player_clubs (
 -- --------------------------------------------------------
 
 INSERT INTO courses (id, name, golf_api_id, created_at)
-VALUES (1, 'St Michaels', NULL, CURRENT_TIMESTAMP);
+VALUES (1, 'St Michaels Golf Course', NULL, CURRENT_TIMESTAMP);
 
 
 -- --------------------------------------------------------
@@ -924,6 +924,9 @@ VALUES
     (556, 31, 7, 7, NULL, NULL, NULL, NULL, 0, 0, 0),
     (557, 31, 8, 8, NULL, 4, 3, 1, 0, 1, 0),
     (558, 31, 9, 9, NULL, 5, 1, 1, 0, 0, 0);
+
+UPDATE holes SET wiped=true WHERE points is null OR (points is not null and putts is null);
+UPDATE holes SET penalty_strokes=1 where penalty=TRUE and wiped=false;
 
 -- ── SHOTS ─────────────────────────────────────────────────────
 
@@ -3472,6 +3475,8 @@ VALUES
     (2538, 558, 3, 'recovery', NULL, 'unknown', NULL, NULL, 'reconstructed'),
     (2539, 558, 4, 'approach', NULL, 'rough', NULL, NULL, 'reconstructed'),
     (2540, 558, 5, 'putt', NULL, 'holed', NULL, NULL, 'reconstructed');
+
+DELETE FROM shots WHERE shot_type='putt';
 
     UPDATE rounds SET
     total_score  = (SELECT SUM(score)  FROM holes WHERE round_id = rounds.id),
