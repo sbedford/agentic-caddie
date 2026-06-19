@@ -26,7 +26,7 @@ func Test_CantAddShotToCompletedHole(t *testing.T) {
 	hole := PlayedHole{Hole: Hole{HoleNumber: 2}, Completed: true}
 	club := Club{ClubName: "Driver"}
 
-	_, err := hole.RecordShot("tee", club, "fairway", "", "clean", "")
+	_, err := hole.RecordShot("tee", club, "fairway", "", StrikeQualityClean, "")
 
 	if err == nil {
 		t.Errorf("Didnt receive error")
@@ -38,7 +38,7 @@ func Test_AddShotAppendsToShotsTaken(t *testing.T) {
 	hole := PlayedHole{Hole: Hole{HoleNumber: 2}, Completed: false}
 	club := Club{ClubName: "Driver"}
 
-	shot, err := hole.RecordShot("tee", club, "fairway", "", "clean", "")
+	shot, err := hole.RecordShot("tee", club, "fairway", "", StrikeQualityClean, "")
 
 	if err != nil {
 		t.Error(err)
@@ -59,8 +59,8 @@ func Test_CurrentLocationRespectsLastShot(t *testing.T) {
 	hole := PlayedHole{Hole: Hole{HoleNumber: 2}, Completed: false}
 	club := Club{ClubName: "Driver"}
 
-	hole.RecordShot("tee", club, "fairway", "", "clean", "")
-	hole.RecordShot("tee", club, "green", "", "clean", "")
+	hole.RecordShot("tee", club, "fairway", "", StrikeQualityClean, "")
+	hole.RecordShot("tee", club, "green", "", StrikeQualityClean, "")
 
 	location := hole.CurrentLocation()
 	if location != "green" {
@@ -72,7 +72,7 @@ func Test_LookupShotByNumber(t *testing.T) {
 	hole := PlayedHole{Hole: Hole{HoleNumber: 2}, Completed: false}
 	club := Club{ClubName: "Driver"}
 
-	shot, _ := hole.RecordShot("tee", club, "fairway", "", "clean", "")
+	shot, _ := hole.RecordShot("tee", club, "fairway", "", StrikeQualityClean, "")
 
 	s, _ := hole.LookupShot(int(shot.ShotNumber))
 	if s == nil {
@@ -104,14 +104,14 @@ func Test_CurrentLocationUsesLastShotIfOB(t *testing.T) {
 	hole := PlayedHole{Hole: Hole{HoleNumber: 2}, Completed: false}
 	club := Club{ClubName: "Driver"}
 
-	hole.RecordShot("tee", club, "OB", "", "clean", "")
+	hole.RecordShot("tee", club, "OB", "", StrikeQualityClean, "")
 
 	location := hole.CurrentLocation()
 	if location != "tee" {
 		t.Errorf("[TestCurrentLocation] - Expected [tee] Got [%v]", location)
 	}
 
-	hole.RecordShot("tee", club, "lost", "", "clean", "")
+	hole.RecordShot("tee", club, "lost", "", StrikeQualityClean, "")
 	location = hole.CurrentLocation()
 	if location != "tee" {
 		t.Errorf("[TestCurrentLocation] - Expected [tee] Got [%v]", location)
@@ -127,29 +127,29 @@ func Test_LastValidShot(t *testing.T) {
 		t.Errorf("[Test_LastValidShot] - dont know how this is possible")
 	}
 
-	hole.RecordShot("tee", club, "fairway", "", "clean", "")
+	hole.RecordShot(ShotTypeTee, club, LocationFairway, "", StrikeQualityClean, "")
 	lastValidShot := hole.GetLastValidShot()
-	if lastValidShot.Result != "fairway" {
-		t.Errorf("[Test_LastValidShot] - expected [fairway]] got [%v]", lastValidShot.Result)
+	if lastValidShot.Result != LocationFairway {
+		t.Errorf("[Test_LastValidShot] - expected [fairway] got [%v]", lastValidShot.Result)
 	}
 
-	hole.RecordShot("approach", club, "OB", "", "clean", "")
-	hole.RecordShot("approach", club, "OB", "", "clean", "")
+	hole.RecordShot(ShotTypeApproach, club, LocationFairway, "", StrikeQualityClean, "")
+	hole.RecordShot(ShotTypeApproach, club, LocationOutOfBounds, "", StrikeQualityClean, "")
 	lastValidShot = hole.GetLastValidShot()
-	if lastValidShot.Result != "fairway" {
-		t.Errorf("[Test_LastValidShot] - expected [fairway]] got [%v]", lastValidShot.Result)
+	if lastValidShot.Result != LocationFairway {
+		t.Errorf("[Test_LastValidShot] - expected [fairway] got [%v]", lastValidShot.Result)
 	}
 
-	hole.RecordShot("approach", club, "green", "", "clean", "")
+	hole.RecordShot(ShotTypeApproach, club, LocationGreen, "", StrikeQualityClean, "")
 	lastValidShot = hole.GetLastValidShot()
-	if lastValidShot.Result != "green" {
+	if lastValidShot.Result != LocationGreen {
 		t.Errorf("[Test_LastValidShot] - expected [green] got [%v]", lastValidShot.Result)
 	}
 }
 
 func Test_ValidShots(t *testing.T) {
 	shot := Shot{
-		Result: "fairway",
+		Result: LocationFairway,
 	}
 
 	checkValid := func(s Shot, expected bool) {
@@ -160,16 +160,16 @@ func Test_ValidShots(t *testing.T) {
 
 	checkValid(shot, true)
 
-	shot.Result = "rough"
+	shot.Result = LocationRough
 	checkValid(shot, true)
 
-	shot.Result = "bunker"
+	shot.Result = LocationBunker
 	checkValid(shot, true)
 
-	shot.Result = "OB"
+	shot.Result = LocationOutOfBounds
 	checkValid(shot, false)
 
-	shot.Result = "green"
+	shot.Result = LocationGreen
 	checkValid(shot, true)
 
 }

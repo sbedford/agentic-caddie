@@ -195,9 +195,15 @@ func (this *GetAdviceRequest) BuildPrompt() string {
 		fmt.Fprintf(&sb, "Standing on the green")
 	}
 	if currentLocation != models.LocationGreen {
-		fmt.Fprintf(&sb, "%vm from the green. ", strconv.FormatInt(this.ScopeForAdvice.Hole.Distance, 10))
+		fmt.Fprintf(&sb, "%vm from the green ", strconv.FormatInt(this.ScopeForAdvice.Hole.Distance, 10))
 	}
-	fmt.Fprintf(&sb, "Provide a stratey")
+
+	if this.ScopeForAdvice.FlagPosition != "" {
+		fmt.Fprintf(&sb, "to a %v pin ", string(this.ScopeForAdvice.FlagPosition))
+	}
+
+	fmt.Fprintf(&sb, ".Provide a stratey")
+
 	return sb.String()
 }
 

@@ -54,7 +54,7 @@ func main() {
 		CurrentRound: *currentRound,
 		ScopeForAdvice: models.PlayedHole{
 			Hole:         *nextHole,
-			FlagPosition: "front-left",
+			FlagPosition: "",
 		},
 	}
 

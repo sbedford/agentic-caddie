@@ -47,7 +47,7 @@ func toContextString(agentInput GetAdviceRequest) string {
 	sb.WriteString("\nDaily Handicap: ")
 	sb.WriteString(strconv.FormatInt(agentInput.CurrentRound.DailyHandicap, 10))
 	sb.WriteString("\nCompetition Type: ")
-	sb.WriteString(agentInput.CurrentRound.CompetitionType)
+	sb.WriteString(string(agentInput.CurrentRound.CompetitionType))
 	sb.WriteString("\nHoles Played: ")
 	sb.WriteString(strconv.Itoa(len(agentInput.CurrentRound.PlayedHoles)))
 

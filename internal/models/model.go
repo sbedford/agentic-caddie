@@ -53,8 +53,8 @@ type Round struct {
 
 	DailyHandicap int64
 
-	RoundType       string
-	CompetitionType string
+	RoundType       RoundType
+	CompetitionType CompetitionType
 
 	TotalScore  int64
 	TotalPoints int64
@@ -66,11 +66,11 @@ type Round struct {
 }
 
 func (this *Round) IsStableford() bool {
-	return this.CompetitionType == "stableford"
+	return this.CompetitionType == CompetitionTypeStableford
 }
 
 func (this *Round) IsStroke() bool {
-	return this.CompetitionType == "stroke"
+	return this.CompetitionType == CompetitionTypeStroke
 }
 
 func (this *Round) PointsBehind() int {
@@ -128,7 +128,7 @@ func (this *Round) StrokesAbovePar() int {
 type PlayedHole struct {
 	Hole Hole
 
-	FlagPosition string
+	FlagPosition FlagPosition
 
 	Score  int64
 	Points int64
@@ -157,8 +157,22 @@ func (hole *PlayedHole) LastShot() *Shot {
 }
 
 type Location string
+type ShotType string
+type ShotResult string
+type StrikeQuality string
+type CompetitionType string
+type RoundType string
+type FlagPosition string
 
 const (
+	CompetitionTypeStableford CompetitionType = "stableford"
+	CompetitionTypeStroke     CompetitionType = "stroke"
+	CompetitionTypeOther      CompetitionType = "other"
+
+	RoundTypeSocial      RoundType = "social"
+	RoundTypeCompetition RoundType = "competition"
+	RoundTypePractice    RoundType = "practice"
+
 	LocationTee           Location = "tee"
 	LocationFairway       Location = "fairway"
 	LocationRough         Location = "rough"
@@ -166,6 +180,36 @@ const (
 	LocationGreen         Location = "green"
 	LocationHazard        Location = "hazard"
 	LocationHoleCompleted Location = "hole completed"
+	LocationOutOfBounds   Location = "ob"
+	LocationLostBall      Location = "lost"
+
+	ShotTypeTee      ShotType = "tee"
+	ShotTypeApproach ShotType = "approach"
+	ShotTypeLayup    ShotType = "layup"
+	ShotTypeChip     ShotType = "chip"
+	ShotTypePitch    ShotType = "pitch"
+	ShotTypeBunker   ShotType = "bunker"
+	ShotTypeRecord   ShotType = "recovery"
+
+	ShotResultLeft  ShotResult = "left"
+	ShotResultRight ShotResult = "righ"
+	ShotResultShort ShotResult = "short"
+	ShotResultLong  ShotResult = "long"
+
+	StrikeQualityClean StrikeQuality = "clean"
+	StrikeQualityFat   StrikeQuality = "fat"
+	StrikeQualityThin  StrikeQuality = "thin"
+	StrikeQualityShank StrikeQuality = "shank"
+
+	FlagPositionFrontLeft    FlagPosition = "front_left"
+	FlagPositionFrontCentre  FlagPosition = "front_centre"
+	FlagPositionFrontRight   FlagPosition = "front_right"
+	FlagPositionMiddleLeft   FlagPosition = "front_left"
+	FlagPositionMiddleCentre FlagPosition = "front_centre"
+	FlagPositionMiddleRight  FlagPosition = "front_right"
+	FlagPositionBackLeft     FlagPosition = "front_left"
+	FlagPositionBackCentre   FlagPosition = "front_centre"
+	FlagPositionBackRight    FlagPosition = "front_right"
 )
 
 func (hole *PlayedHole) CurrentLocation() Location {
@@ -226,7 +270,7 @@ func (hole *PlayedHole) LookupShot(shotNumber int) (*Shot, error) {
 	return &hole.ShotsTaken[idx], nil
 }
 
-func (hole *PlayedHole) RecordShot(shotType string, clubUsed Club, result string, missDirection string, strike string, agentRecommendation string) (*Shot, error) {
+func (hole *PlayedHole) RecordShot(shotType ShotType, clubUsed Club, result Location, missDirection ShotResult, strike StrikeQuality, agentRecommendation string) (*Shot, error) {
 
 	if hole.Completed {
 		return nil, fmt.Errorf("Hole %v already completed", hole.Hole.HoleNumber)
@@ -258,18 +302,22 @@ func (hole *PlayedHole) RecordShot(shotType string, clubUsed Club, result string
 type Shot struct {
 	Hole                  PlayedHole
 	ShotNumber            int64 // 1, 2,3,4
-	ShotType              string
+	ShotType              ShotType
 	Club                  string
-	Result                string
-	Miss                  string
-	StrikeQuality         string
+	Result                Location
+	Miss                  ShotResult
+	StrikeQuality         StrikeQuality
 	PreShotRecommendation string
 	Completed             bool
 	Source                string
 }
 
 func (shot *Shot) ValidShot() bool {
-	return (shot.Result == "fairway" || shot.Result == "rough" || shot.Result == "bunker" || shot.Result == "hazard" || shot.Result == "green")
+	return (shot.Result == LocationFairway ||
+		shot.Result == LocationRough ||
+		shot.Result == LocationBunker ||
+		shot.Result == LocationHazard ||
+		shot.Result == LocationGreen)
 }
 
 type Course struct {
@@ -345,8 +393,8 @@ func ConvertRound(in db.Round, c Course, p Player, t Tee) Round {
 		Golfer:          p,
 		RoundDate:       in.PlayedAt,
 		DailyHandicap:   in.DailyHandicap,
-		RoundType:       in.RoundType,
-		CompetitionType: helpers.String(in.CompetitionType),
+		RoundType:       RoundType(in.RoundType),
+		CompetitionType: CompetitionType(helpers.String(in.CompetitionType)),
 
 		RoundCompleted: in.Completed,
 
@@ -400,9 +448,3 @@ func ConvertPlayedHole(in db.Hole, h Hole) PlayedHole {
 		Completed:         helpers.Bool(in.Completed),
 	}
 }
-
-// func (hole *PlayedHole) AttachShots(allHoleShots []db.Shot) {
-// 	shotsForThisHole := helpers.Filter(allHoleShots, func(s db.Shot) bool {
-// 		return s.HoleID
-// 	})
-// }
