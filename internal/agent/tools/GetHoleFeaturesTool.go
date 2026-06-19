@@ -13,7 +13,7 @@ import (
 
 var GetHoleLayoutToolDef = anthropic.ToolUnionParam{
 	OfTool: &anthropic.ToolParam{
-		Name:        "get_hole_Layout",
+		Name:        "get_hole_layout",
 		Description: anthropic.String("Returns data points for a hole on a specific course: par, stroke index, distance and a series of hole Layout. Use this to look for specific details on the hole to base your advice."),
 		InputSchema: anthropic.ToolInputSchemaParam{
 			Properties: map[string]any{
@@ -21,7 +21,7 @@ var GetHoleLayoutToolDef = anthropic.ToolUnionParam{
 					"type":        "integer",
 					"description": "The course identifier",
 				},
-				"tee": map[string]any{
+				"tee_name": map[string]any{
 					"type":        "string",
 					"description": "Tee name, typically Black or White",
 				},
@@ -59,10 +59,10 @@ func buildListPOIsByHoleAndTeeParams(pois []db.HolePointsOfInterest) []getHoleLa
 	for i, poi := range pois {
 		output[i] = getHoleLayoutFeatures{
 			PoiType:        poi.PoiType,
-			Side:           *helpers.NullableString(poi.Side),
-			ReferencePoint: *helpers.NullableString(poi.ReferencePoint),
-			DistanceStart:  *helpers.NullableFloat64(poi.DistanceStart),
-			DistanceEnd:    *helpers.NullableFloat64(poi.DistanceEnd),
+			Side:           helpers.String(poi.Side),
+			ReferencePoint: helpers.String(poi.ReferencePoint),
+			DistanceStart:  helpers.Float64(poi.DistanceStart),
+			DistanceEnd:    helpers.Float64(poi.DistanceEnd),
 			Label:          poi.Label,
 		}
 	}

@@ -20,13 +20,13 @@ func GetPlayerService(context context.Context, db *db.Queries) PlayerService {
 	}
 }
 
-func (ps PlayerService) GetPlayer(playerId int64) (models.Player, error) {
+func (ps PlayerService) GetPlayer(playerId int64) (*models.Player, error) {
 	player := models.Player{}
 
 	p, err := ps.q.GetPlayerByID(ps.ctx, playerId)
 	if err != nil {
 		log.Printf("error getting player")
-		return player, err
+		return nil, err
 	}
 
 	player.ID = p.ID
@@ -36,7 +36,7 @@ func (ps PlayerService) GetPlayer(playerId int64) (models.Player, error) {
 	clubs, err := ps.q.ListActiveClubsByPlayer(ps.ctx, 1)
 	if err != nil {
 		log.Println("error getting clubs")
-		return player, err
+		return &player, err
 	}
 
 	player.Clubs = make([]models.Club, len(clubs))
@@ -51,8 +51,8 @@ func (ps PlayerService) GetPlayer(playerId int64) (models.Player, error) {
 	player.Rounds, err = roundsService.GetRoundsByPlayer(player)
 	if err != nil {
 		log.Println("error getting rounds")
-		return player, err
+		return &player, err
 	}
 
-	return player, nil
+	return &player, nil
 }

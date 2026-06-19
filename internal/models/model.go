@@ -61,6 +61,46 @@ type Round struct {
 	PlayedHoles []PlayedHole
 }
 
+func (this *Round) IsStableford() bool {
+	return this.CompetitionType == "stableford"
+}
+
+func (this *Round) IsStroke() bool {
+	return this.CompetitionType == "stroke"
+}
+
+func (this *Round) PointsBehind() int {
+	if this.IsStableford() {
+
+		completedHoles := helpers.Filter(this.PlayedHoles, func(ph PlayedHole) bool {
+			return ph.Completed
+		})
+
+		return (2 * len(completedHoles)) - int(this.TotalPoints)
+	}
+	return 0
+}
+
+func (this *Round) StrokesAbovePar() int {
+	if this.IsStableford() {
+
+		completedHoles := helpers.Filter(this.PlayedHoles, func(ph PlayedHole) bool {
+			return ph.Completed
+		})
+
+		par := 0
+		for _, ch := range completedHoles {
+
+			// needs to factor in shots given on a hole, but data model doesnt support yet.
+
+			par += int(ch.Hole.Par)
+		}
+
+		return (-1 * (int(this.TotalScore) - par))
+	}
+	return 0
+}
+
 type PlayedHole struct {
 	Hole Hole
 
@@ -76,6 +116,22 @@ type PlayedHole struct {
 	Penalty           bool
 
 	PreShotRecommendation string
+	Completed             bool
+
+	ShotsTaken []Shot
+}
+
+type Shot struct {
+	Hole                  PlayedHole
+	ShotNumber            int64 // 1, 2,3,4
+	ShotType              string
+	Club                  string
+	Result                string
+	Miss                  string
+	StrikeQuality         string
+	PreShotRecommendation string
+	Completed             bool
+	Source                string
 }
 
 type Course struct {
@@ -193,15 +249,20 @@ func LoadCourse(c db.Course, t []db.Tee, h []db.GetHolesByCourseRow) *Course {
 
 func ConvertPlayedHole(in db.Hole, h Hole) PlayedHole {
 	return PlayedHole{
-		Hole:                  h,
-		Score:                 helpers.Int64(in.Score),
-		Points:                helpers.Int64(in.Points),
-		NumberOfPutts:         helpers.Int64(in.Putts),
-		FairwayHit:            helpers.Bool(in.FairwayHit),
-		GreenInRegulation:     helpers.Bool(in.Gir),
-		ScrambleSave:          helpers.Bool(in.ScrambleSave),
-		Penalty:               helpers.Bool(in.Penalty),
-		PreShotRecommendation: "",
+		Hole:              h,
+		Score:             helpers.Int64(in.Score),
+		Points:            helpers.Int64(in.Points),
+		NumberOfPutts:     helpers.Int64(in.Putts),
+		FairwayHit:        helpers.Bool(in.FairwayHit),
+		GreenInRegulation: helpers.Bool(in.Gir),
+		ScrambleSave:      helpers.Bool(in.ScrambleSave),
+		Penalty:           helpers.Bool(in.Penalty),
+		Completed:         helpers.Bool(in.Completed),
 	}
-
 }
+
+// func (hole *PlayedHole) AttachShots(allHoleShots []db.Shot) {
+// 	shotsForThisHole := helpers.Filter(allHoleShots, func(s db.Shot) bool {
+// 		return s.HoleID
+// 	})
+// }

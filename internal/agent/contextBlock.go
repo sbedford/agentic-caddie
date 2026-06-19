@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
-
-	"github.com/sbedford/agentic-caddie/internal/helpers"
 )
 
 // Structure:
@@ -39,42 +37,37 @@ func toContextString(agentInput GetAdviceRequest) string {
 	sb.WriteString("Name: ")
 	sb.WriteString(agentInput.Player.Name)
 
-	holesPlayed := 3
-
 	sb.WriteString("\n## Current Round")
+
+	sb.WriteString("\nCourse Id: ")
+	sb.WriteString(strconv.FormatInt(agentInput.CurrentRound.Course.Id, 10))
+	sb.WriteString("\nTees: ")
+	sb.WriteString(agentInput.CurrentRound.Tee.Name)
+
 	sb.WriteString("\nDaily Handicap: ")
 	sb.WriteString(strconv.FormatInt(agentInput.CurrentRound.DailyHandicap, 10))
 	sb.WriteString("\nCompetition Type: ")
-	sb.WriteString(agentInput.CurrentRound.CompetitionType.String)
+	sb.WriteString(agentInput.CurrentRound.CompetitionType)
 	sb.WriteString("\nHoles Played: ")
-	sb.WriteString(strconv.Itoa(holesPlayed))
+	sb.WriteString(strconv.Itoa(len(agentInput.CurrentRound.PlayedHoles)))
 
-	if *helpers.NullableString(agentInput.CurrentRound.CompetitionType) == "stableford" {
+	if agentInput.CurrentRound.IsStableford() {
 		sb.WriteString("\nPoints: ")
-		if helpers.NullableInt64(agentInput.CurrentRound.TotalPoints) == nil {
-			sb.WriteString("0")
-			sb.WriteString("\nPoints Behind: 0")
-		} else {
-			sb.WriteString(strconv.FormatInt(agentInput.CurrentRound.TotalPoints.Int64, 10))
-			sb.WriteString("\nPoints Behind: ")
-			sb.WriteString(strconv.Itoa((holesPlayed * 2) - int(agentInput.CurrentRound.TotalPoints.Int64)))
-		}
+		sb.WriteString(strconv.FormatInt(agentInput.CurrentRound.TotalPoints, 10))
+		sb.WriteString("\nPoints Behind: ")
+		sb.WriteString(strconv.FormatInt(int64(agentInput.CurrentRound.PointsBehind()), 10))
 	}
 
-	if *helpers.NullableString(agentInput.CurrentRound.CompetitionType) == "stroke" {
+	if agentInput.CurrentRound.IsStroke() {
 		sb.WriteString("\nStrokes: ")
-		if helpers.NullableInt64(agentInput.CurrentRound.TotalScore) == nil {
-			sb.WriteString("0")
-			sb.WriteString("\nTo Par: 0")
-		} else {
-			sb.WriteString(strconv.FormatInt(agentInput.CurrentRound.TotalScore.Int64, 10))
-			sb.WriteString("\nTo Par: 0")
-		}
+		sb.WriteString(strconv.FormatInt(agentInput.CurrentRound.TotalScore, 10))
+		sb.WriteString("\nStrokes Above Par: ")
+		sb.WriteString(strconv.FormatInt(int64(agentInput.CurrentRound.StrokesAbovePar()), 10))
 	}
 
-	sb.WriteString("Available Clubs: \n")
+	sb.WriteString("\n## Available Clubs: \n")
 	sb.WriteString("Format: C:Club RC:Reliable Carry AC:Average Carry D:Dispersion \n")
-	for _, club := range agentInput.Clubs {
+	for _, club := range agentInput.Player.Clubs {
 		fmt.Fprintf(&sb, "C:%v RC: %v D: %vm(%v)\n", club.ClubName, club.CarryReliable, club.DispersionAvgM, club.DispersionBias)
 	}
 

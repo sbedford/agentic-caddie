@@ -2,12 +2,16 @@ package agent
 
 import (
 	"context"
+	"fmt"
 	"os"
+	"strconv"
+	"strings"
 
 	"github.com/anthropics/anthropic-sdk-go"
 	"github.com/anthropics/anthropic-sdk-go/option"
 	"github.com/sbedford/agentic-caddie/internal/agent/tools"
 	"github.com/sbedford/agentic-caddie/internal/db"
+	"github.com/sbedford/agentic-caddie/internal/models"
 )
 
 const SystemPrompt string = `
@@ -95,12 +99,12 @@ within that. Bogey is fine. Double is not.
 You have two tools. The current round state and player tendencies are always present
 in the context block — only call tools when you need information not already there.
  
-**get_hole_stats(hole_num, tee, course_id)**
+**get_hole_stats(hole_num, course_id, tee_name)**
 Returns the player's historical performance on this specific hole: scores, GIR rate,
 fairway hit rate, putts, and observed miss direction. Call this for every hole
 recommendation — it is your primary source of player-specific hole intelligence.
  
-**get_hole_layout(hole_num, tee, course_id)**
+**get_hole_layout(hole_num, course_id, tee_name)**
 Returns hole layout data: par, stroke index, distance, and a series of hole commentary 
 containing hazards, bunkers and other features to be aware of.  Call this to understand 
 what the hole asks of the player — distances, trouble locations, and how the hole is designed to be played.
@@ -162,23 +166,34 @@ Keep all fields below 20 words at all times.
 }
 `
 
+func (this *GetAdviceRequest) BuildPrompt() string {
+
+	var sb strings.Builder
+	fmt.Fprintf(&sb, "%v is playing Hole %v at %v. Currently playing a tee shot %vm from the green.  Provide a stratey",
+		this.Player.Name,
+		this.ScopeForAdvice.Hole.HoleNumber,
+		this.CurrentRound.Course.Name,
+		strconv.FormatInt(this.ScopeForAdvice.Hole.Distance, 10))
+	return sb.String()
+}
+
 type GetAdviceRequest struct {
-	Queries      *db.Queries
-	Player       db.Player
-	CurrentRound db.Round
-	Rounds       []db.Round
-	Clubs        []db.PlayerClub
+	Queries        *db.Queries
+	Player         models.Player
+	CurrentRound   models.Round
+	Rounds         []models.Round
+	ScopeForAdvice models.PlayedHole
 }
 
 func GetAdvice(ctx context.Context, req GetAdviceRequest) (string, error) {
-
 	client := anthropic.NewClient(option.WithAPIKey(os.Getenv("ANTHROPIC_API_KEY")))
 	agent := NewAgent(client, SystemPrompt)
-
-	cb := toContextString(req)
 
 	agent.RegisterTool(tools.GetHoleStatsToolDef, "get_hole_stats", tools.NewHoleStatsHandler(req.Queries))
 	agent.RegisterTool(tools.GetHoleLayoutToolDef, "get_hole_layout", tools.NewHoleLayoutHandler(req.Queries))
 
-	return agent.Run(ctx, cb, "Where am I losing shots on par 4s over 380 yards?")
+	cb := toContextString(req)
+	prompt := req.BuildPrompt()
+
+	return agent.Run(ctx, cb, prompt)
 }

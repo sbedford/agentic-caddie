@@ -34,6 +34,11 @@ func (a *Agent) RegisterTool(def anthropic.ToolUnionParam, name string, h ToolHa
 // Run executes the full agent loop for a single user request.
 // contextBlock is your game-model text, prepended to the user message.
 func (a *Agent) Run(ctx context.Context, contextBlock, userMessage string) (string, error) {
+
+	fmt.Printf("Received request [%f] \n", userMessage)
+
+	fmt.Printf("Context block [%f] \n", contextBlock)
+
 	messages := []anthropic.MessageParam{
 		anthropic.NewUserMessage(
 			anthropic.NewTextBlock(contextBlock + "\n\n" + userMessage),
@@ -42,7 +47,8 @@ func (a *Agent) Run(ctx context.Context, contextBlock, userMessage string) (stri
 
 	for {
 		resp, err := a.client.Messages.New(ctx, anthropic.MessageNewParams{
-			Model:     anthropic.ModelClaudeSonnet4_6,
+			//Model:     anthropic.ModelClaudeSonnet4_6,
+			Model:     anthropic.ModelClaudeHaiku4_5,
 			MaxTokens: 1024,
 			System: []anthropic.TextBlockParam{
 				{Text: a.systemPrompt},
@@ -77,13 +83,17 @@ func (a *Agent) Run(ctx context.Context, contextBlock, userMessage string) (stri
 			}
 
 			handler, found := a.handlers[tu.Name]
+
 			var resultText string
 			isError := false
 
 			if !found {
-				resultText = fmt.Sprintf("unknown tool: %s", tu.Name)
+				resultText = fmt.Sprintf("Received request for invalid tool [%s]\n", tu.Name)
 				isError = true
 			} else {
+
+				fmt.Printf("Calling tool [%v] input [%s]\n", tu.Name, tu.Input)
+
 				out, err := handler(ctx, tu.Input)
 				if err != nil {
 					resultText = err.Error()
@@ -92,7 +102,7 @@ func (a *Agent) Run(ctx context.Context, contextBlock, userMessage string) (stri
 					resultText = out
 				}
 			}
-
+			fmt.Printf("Got response [%v] from tool [%v]\n", resultText, tu.Name)
 			toolResults = append(toolResults, anthropic.NewToolResultBlock(tu.ID, resultText, isError))
 		}
 

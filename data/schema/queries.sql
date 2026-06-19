@@ -24,13 +24,13 @@
 -- ============================================================
 
 -- name: GetVocabularyByDomain :many
-SELECT domain, value, label, sort_order
+SELECT *
 FROM vocabulary
 WHERE domain = ?
 ORDER BY sort_order;
 
 -- name: GetAllVocabulary :many
-SELECT domain, value, label, sort_order
+SELECT *
 FROM vocabulary
 ORDER BY domain, sort_order;
 
@@ -60,12 +60,12 @@ SELECT COUNT(*) FROM vocabulary WHERE domain = ? AND value = ?;
 -- ============================================================
 
 -- name: ListCourses :many
-SELECT id, name, golf_api_id, created_at
+SELECT *
 FROM courses
 ORDER BY name;
 
 -- name: GetCourseByID :one
-SELECT id, name, golf_api_id, created_at
+SELECT *
 FROM courses
 WHERE id = ?;
 
@@ -415,35 +415,30 @@ WHERE id = ?;
 -- ============================================================
 
 -- name: ListRounds :many
-SELECT id, player_id, course_id, played_at, daily_handicap, tees, round_type, competition_type,
-       total_score, total_points, total_putts, created_at
+SELECT *
 FROM rounds
 ORDER BY played_at DESC;
 
--- name: ListRoundsByPlayer :many
-SELECT id, player_id, course_id, played_at, daily_handicap, tees, round_type, competition_type,
-       total_score, total_points, total_putts, created_at
+-- name: ListCompletedRoundsByPlayer :many
+SELECT *
 FROM rounds
-WHERE player_id = ?
+WHERE player_id = ? AND Completed=TRUE
 ORDER BY played_at DESC;
 
 -- name: ListRoundsByPlayerAndCourse :many
-SELECT id, player_id, course_id, played_at, daily_handicap, tees, round_type, competition_type,
-       total_score, total_points, total_putts, created_at
+SELECT *
 FROM rounds
 WHERE player_id = ?
   AND course_id = ?
 ORDER BY played_at DESC;
 
 -- name: GetRoundByID :one
-SELECT id, player_id, course_id, played_at, daily_handicap, tees, round_type, competition_type,
-       total_score, total_points, total_putts, created_at
+SELECT *
 FROM rounds
 WHERE id = ?;
 
 -- name: GetRoundByPlayerAndDate :one
-SELECT id, player_id, course_id, played_at, daily_handicap, tees, round_type, competition_type,
-       total_score, total_points, total_putts, created_at
+SELECT *
 FROM rounds
 WHERE player_id = ?
   AND played_at = ?;
@@ -474,21 +469,18 @@ WHERE id = ?;
 -- ============================================================
 
 -- name: ListHolesByRound :many
-SELECT id, round_id, course_hole_id, hole_number, flag_position,
-       score, points, putts,fairway_hit,  gir,  scramble_save, penalty
+SELECT *
 FROM holes
 WHERE round_id = ?
 ORDER BY hole_number;
 
 -- name: GetHoleByID :one
-SELECT id, round_id, course_hole_id, hole_number, flag_position,
-       score, points, putts,fairway_hit,  gir, scramble_save, penalty
+SELECT *
 FROM holes
 WHERE id = ?;
 
 -- name: GetHoleByRoundAndNumber :one
-SELECT id, round_id, course_hole_id, hole_number, flag_position,
-       score, points, putts, fairway_hit,  gir, scramble_save, penalty
+SELECT *
 FROM holes
 WHERE round_id    = ?
   AND hole_number = ?;
@@ -522,29 +514,31 @@ WHERE id = ?;
 -- ============================================================
 
 -- name: ListShotsByHole :many
-SELECT id, hole_id, shot_number, shot_type, club,
-       result, miss, strike_quality, source, pre_shot_recommendation,completed
+SELECT *
 FROM shots
 WHERE hole_id = ?
 ORDER BY shot_number;
 
 -- name: ListShotsByHoleAndType :many
-SELECT id, hole_id, shot_number, shot_type, club,
-       result, miss, strike_quality, source, pre_shot_recommendation,completed
+SELECT *
 FROM shots
 WHERE hole_id   = ?
   AND shot_type = ?
 ORDER BY shot_number;
 
 -- name: GetShotByID :one
-SELECT id, hole_id, shot_number, shot_type, club,
-       result, miss, strike_quality, source, pre_shot_recommendation,completed
+SELECT *
 FROM shots
 WHERE id = ?;
 
+-- name: GetShotsByRound :one
+SELECT s.*
+FROM shots s
+INNER JOIN holes h ON h.ID = s.hole_id AND h.round_id=?;
+
+
 -- name: GetShotByHoleAndNumber :one
-SELECT id, hole_id, shot_number, shot_type, club,
-       result, miss, strike_quality, source, pre_shot_recommendation,completed
+SELECT *
 FROM shots
 WHERE hole_id    = ?
   AND shot_number = ?;

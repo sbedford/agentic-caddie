@@ -45,6 +45,7 @@ type Hole struct {
 	Gir          sql.NullBool
 	ScrambleSave sql.NullBool
 	Penalty      sql.NullBool
+	Completed    sql.NullBool
 }
 
 type HolePointsOfInterest struct {
@@ -93,6 +94,7 @@ type Round struct {
 	TotalScore      sql.NullInt64
 	TotalPoints     sql.NullInt64
 	TotalPutts      sql.NullInt64
+	Completed       bool
 	CreatedAt       time.Time
 }
 

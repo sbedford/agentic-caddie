@@ -303,6 +303,7 @@ CREATE TABLE rounds (
     total_score     INTEGER,
     total_points    INTEGER,
     total_putts     INTEGER,
+    completed       BOOLEAN NOT NULL DEFAULT FALSE,
     created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -319,9 +320,7 @@ CREATE TABLE rounds (
 --   'back_left', 'back_centre', 'back_right'
 --
 -- gir: true = green hit in regulation
---      false + scramble_attempt = true → scramble situation
---      false + scramble_attempt = false → didn't attempt green in regulation
---        (punch out, layup forced by position)
+
 --
 -- penalty: any penalty stroke on the hole, regardless of where it occurred
 CREATE TABLE holes (
@@ -337,6 +336,7 @@ CREATE TABLE holes (
     gir                 BOOLEAN,
     scramble_save       BOOLEAN,
     penalty             BOOLEAN,
+    completed       BOOLEAN DEFAULT FALSE,
 
     UNIQUE(round_id, hole_number)
 );

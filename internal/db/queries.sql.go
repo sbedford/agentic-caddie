@@ -726,8 +726,7 @@ func (q *Queries) GetCourseHoleByID(ctx context.Context, id int64) (CourseHole, 
 }
 
 const getHoleByID = `-- name: GetHoleByID :one
-SELECT id, round_id, course_hole_id, hole_number, flag_position,
-       score, points, putts,fairway_hit,  gir, scramble_save, penalty
+SELECT id, round_id, course_hole_id, hole_number, flag_position, score, points, putts, fairway_hit, gir, scramble_save, penalty, completed
 FROM holes
 WHERE id = ?
 `
@@ -748,13 +747,13 @@ func (q *Queries) GetHoleByID(ctx context.Context, id int64) (Hole, error) {
 		&i.Gir,
 		&i.ScrambleSave,
 		&i.Penalty,
+		&i.Completed,
 	)
 	return i, err
 }
 
 const getHoleByRoundAndNumber = `-- name: GetHoleByRoundAndNumber :one
-SELECT id, round_id, course_hole_id, hole_number, flag_position,
-       score, points, putts, fairway_hit,  gir, scramble_save, penalty
+SELECT id, round_id, course_hole_id, hole_number, flag_position, score, points, putts, fairway_hit, gir, scramble_save, penalty, completed
 FROM holes
 WHERE round_id    = ?
   AND hole_number = ?
@@ -781,6 +780,7 @@ func (q *Queries) GetHoleByRoundAndNumber(ctx context.Context, arg GetHoleByRoun
 		&i.Gir,
 		&i.ScrambleSave,
 		&i.Penalty,
+		&i.Completed,
 	)
 	return i, err
 }
@@ -1027,8 +1027,7 @@ func (q *Queries) GetPlayerByName(ctx context.Context, name string) (Player, err
 }
 
 const getRoundByID = `-- name: GetRoundByID :one
-SELECT id, player_id, course_id, played_at, daily_handicap, tees, round_type, competition_type,
-       total_score, total_points, total_putts, created_at
+SELECT id, player_id, course_id, played_at, daily_handicap, tees, round_type, competition_type, total_score, total_points, total_putts, completed, created_at
 FROM rounds
 WHERE id = ?
 `
@@ -1048,14 +1047,14 @@ func (q *Queries) GetRoundByID(ctx context.Context, id int64) (Round, error) {
 		&i.TotalScore,
 		&i.TotalPoints,
 		&i.TotalPutts,
+		&i.Completed,
 		&i.CreatedAt,
 	)
 	return i, err
 }
 
 const getRoundByPlayerAndDate = `-- name: GetRoundByPlayerAndDate :one
-SELECT id, player_id, course_id, played_at, daily_handicap, tees, round_type, competition_type,
-       total_score, total_points, total_putts, created_at
+SELECT id, player_id, course_id, played_at, daily_handicap, tees, round_type, competition_type, total_score, total_points, total_putts, completed, created_at
 FROM rounds
 WHERE player_id = ?
   AND played_at = ?
@@ -1081,14 +1080,14 @@ func (q *Queries) GetRoundByPlayerAndDate(ctx context.Context, arg GetRoundByPla
 		&i.TotalScore,
 		&i.TotalPoints,
 		&i.TotalPutts,
+		&i.Completed,
 		&i.CreatedAt,
 	)
 	return i, err
 }
 
 const getShotByHoleAndNumber = `-- name: GetShotByHoleAndNumber :one
-SELECT id, hole_id, shot_number, shot_type, club,
-       result, miss, strike_quality, source, pre_shot_recommendation,completed
+SELECT id, hole_id, shot_number, shot_type, club, result, miss, strike_quality, pre_shot_recommendation, completed, source
 FROM shots
 WHERE hole_id    = ?
   AND shot_number = ?
@@ -1099,23 +1098,9 @@ type GetShotByHoleAndNumberParams struct {
 	ShotNumber int64
 }
 
-type GetShotByHoleAndNumberRow struct {
-	ID                    int64
-	HoleID                int64
-	ShotNumber            int64
-	ShotType              string
-	Club                  sql.NullString
-	Result                sql.NullString
-	Miss                  sql.NullString
-	StrikeQuality         sql.NullString
-	Source                string
-	PreShotRecommendation sql.NullString
-	Completed             sql.NullBool
-}
-
-func (q *Queries) GetShotByHoleAndNumber(ctx context.Context, arg GetShotByHoleAndNumberParams) (GetShotByHoleAndNumberRow, error) {
+func (q *Queries) GetShotByHoleAndNumber(ctx context.Context, arg GetShotByHoleAndNumberParams) (Shot, error) {
 	row := q.db.QueryRowContext(ctx, getShotByHoleAndNumber, arg.HoleID, arg.ShotNumber)
-	var i GetShotByHoleAndNumberRow
+	var i Shot
 	err := row.Scan(
 		&i.ID,
 		&i.HoleID,
@@ -1125,37 +1110,22 @@ func (q *Queries) GetShotByHoleAndNumber(ctx context.Context, arg GetShotByHoleA
 		&i.Result,
 		&i.Miss,
 		&i.StrikeQuality,
-		&i.Source,
 		&i.PreShotRecommendation,
 		&i.Completed,
+		&i.Source,
 	)
 	return i, err
 }
 
 const getShotByID = `-- name: GetShotByID :one
-SELECT id, hole_id, shot_number, shot_type, club,
-       result, miss, strike_quality, source, pre_shot_recommendation,completed
+SELECT id, hole_id, shot_number, shot_type, club, result, miss, strike_quality, pre_shot_recommendation, completed, source
 FROM shots
 WHERE id = ?
 `
 
-type GetShotByIDRow struct {
-	ID                    int64
-	HoleID                int64
-	ShotNumber            int64
-	ShotType              string
-	Club                  sql.NullString
-	Result                sql.NullString
-	Miss                  sql.NullString
-	StrikeQuality         sql.NullString
-	Source                string
-	PreShotRecommendation sql.NullString
-	Completed             sql.NullBool
-}
-
-func (q *Queries) GetShotByID(ctx context.Context, id int64) (GetShotByIDRow, error) {
+func (q *Queries) GetShotByID(ctx context.Context, id int64) (Shot, error) {
 	row := q.db.QueryRowContext(ctx, getShotByID, id)
-	var i GetShotByIDRow
+	var i Shot
 	err := row.Scan(
 		&i.ID,
 		&i.HoleID,
@@ -1165,9 +1135,34 @@ func (q *Queries) GetShotByID(ctx context.Context, id int64) (GetShotByIDRow, er
 		&i.Result,
 		&i.Miss,
 		&i.StrikeQuality,
-		&i.Source,
 		&i.PreShotRecommendation,
 		&i.Completed,
+		&i.Source,
+	)
+	return i, err
+}
+
+const getShotsByRound = `-- name: GetShotsByRound :one
+SELECT s.id, s.hole_id, s.shot_number, s.shot_type, s.club, s.result, s.miss, s.strike_quality, s.pre_shot_recommendation, s.completed, s.source
+FROM shots s
+INNER JOIN holes h ON h.ID = s.hole_id AND h.round_id=?
+`
+
+func (q *Queries) GetShotsByRound(ctx context.Context, roundID int64) (Shot, error) {
+	row := q.db.QueryRowContext(ctx, getShotsByRound, roundID)
+	var i Shot
+	err := row.Scan(
+		&i.ID,
+		&i.HoleID,
+		&i.ShotNumber,
+		&i.ShotType,
+		&i.Club,
+		&i.Result,
+		&i.Miss,
+		&i.StrikeQuality,
+		&i.PreShotRecommendation,
+		&i.Completed,
+		&i.Source,
 	)
 	return i, err
 }
@@ -1547,6 +1542,50 @@ func (q *Queries) ListCommentaryByScope(ctx context.Context, arg ListCommentaryB
 	return items, nil
 }
 
+const listCompletedRoundsByPlayer = `-- name: ListCompletedRoundsByPlayer :many
+SELECT id, player_id, course_id, played_at, daily_handicap, tees, round_type, competition_type, total_score, total_points, total_putts, completed, created_at
+FROM rounds
+WHERE player_id = ? AND Completed=TRUE
+ORDER BY played_at DESC
+`
+
+func (q *Queries) ListCompletedRoundsByPlayer(ctx context.Context, playerID int64) ([]Round, error) {
+	rows, err := q.db.QueryContext(ctx, listCompletedRoundsByPlayer, playerID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Round
+	for rows.Next() {
+		var i Round
+		if err := rows.Scan(
+			&i.ID,
+			&i.PlayerID,
+			&i.CourseID,
+			&i.PlayedAt,
+			&i.DailyHandicap,
+			&i.Tees,
+			&i.RoundType,
+			&i.CompetitionType,
+			&i.TotalScore,
+			&i.TotalPoints,
+			&i.TotalPutts,
+			&i.Completed,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listCourseHoles = `-- name: ListCourseHoles :many
 
 SELECT id, course_id, hole_number, green_centre_lat, green_centre_lng
@@ -1629,8 +1668,7 @@ func (q *Queries) ListCourses(ctx context.Context) ([]Course, error) {
 
 const listHolesByRound = `-- name: ListHolesByRound :many
 
-SELECT id, round_id, course_hole_id, hole_number, flag_position,
-       score, points, putts,fairway_hit,  gir,  scramble_save, penalty
+SELECT id, round_id, course_hole_id, hole_number, flag_position, score, points, putts, fairway_hit, gir, scramble_save, penalty, completed
 FROM holes
 WHERE round_id = ?
 ORDER BY hole_number
@@ -1662,6 +1700,7 @@ func (q *Queries) ListHolesByRound(ctx context.Context, roundID int64) ([]Hole, 
 			&i.Gir,
 			&i.ScrambleSave,
 			&i.Penalty,
+			&i.Completed,
 		); err != nil {
 			return nil, err
 		}
@@ -1810,8 +1849,7 @@ func (q *Queries) ListPlayers(ctx context.Context) ([]Player, error) {
 
 const listRounds = `-- name: ListRounds :many
 
-SELECT id, player_id, course_id, played_at, daily_handicap, tees, round_type, competition_type,
-       total_score, total_points, total_putts, created_at
+SELECT id, player_id, course_id, played_at, daily_handicap, tees, round_type, competition_type, total_score, total_points, total_putts, completed, created_at
 FROM rounds
 ORDER BY played_at DESC
 `
@@ -1842,50 +1880,7 @@ func (q *Queries) ListRounds(ctx context.Context) ([]Round, error) {
 			&i.TotalScore,
 			&i.TotalPoints,
 			&i.TotalPutts,
-			&i.CreatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listRoundsByPlayer = `-- name: ListRoundsByPlayer :many
-SELECT id, player_id, course_id, played_at, daily_handicap, tees, round_type, competition_type,
-       total_score, total_points, total_putts, created_at
-FROM rounds
-WHERE player_id = ?
-ORDER BY played_at DESC
-`
-
-func (q *Queries) ListRoundsByPlayer(ctx context.Context, playerID int64) ([]Round, error) {
-	rows, err := q.db.QueryContext(ctx, listRoundsByPlayer, playerID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []Round
-	for rows.Next() {
-		var i Round
-		if err := rows.Scan(
-			&i.ID,
-			&i.PlayerID,
-			&i.CourseID,
-			&i.PlayedAt,
-			&i.DailyHandicap,
-			&i.Tees,
-			&i.RoundType,
-			&i.CompetitionType,
-			&i.TotalScore,
-			&i.TotalPoints,
-			&i.TotalPutts,
+			&i.Completed,
 			&i.CreatedAt,
 		); err != nil {
 			return nil, err
@@ -1902,8 +1897,7 @@ func (q *Queries) ListRoundsByPlayer(ctx context.Context, playerID int64) ([]Rou
 }
 
 const listRoundsByPlayerAndCourse = `-- name: ListRoundsByPlayerAndCourse :many
-SELECT id, player_id, course_id, played_at, daily_handicap, tees, round_type, competition_type,
-       total_score, total_points, total_putts, created_at
+SELECT id, player_id, course_id, played_at, daily_handicap, tees, round_type, competition_type, total_score, total_points, total_putts, completed, created_at
 FROM rounds
 WHERE player_id = ?
   AND course_id = ?
@@ -1936,6 +1930,7 @@ func (q *Queries) ListRoundsByPlayerAndCourse(ctx context.Context, arg ListRound
 			&i.TotalScore,
 			&i.TotalPoints,
 			&i.TotalPutts,
+			&i.Completed,
 			&i.CreatedAt,
 		); err != nil {
 			return nil, err
@@ -1953,40 +1948,25 @@ func (q *Queries) ListRoundsByPlayerAndCourse(ctx context.Context, arg ListRound
 
 const listShotsByHole = `-- name: ListShotsByHole :many
 
-SELECT id, hole_id, shot_number, shot_type, club,
-       result, miss, strike_quality, source, pre_shot_recommendation,completed
+SELECT id, hole_id, shot_number, shot_type, club, result, miss, strike_quality, pre_shot_recommendation, completed, source
 FROM shots
 WHERE hole_id = ?
 ORDER BY shot_number
 `
 
-type ListShotsByHoleRow struct {
-	ID                    int64
-	HoleID                int64
-	ShotNumber            int64
-	ShotType              string
-	Club                  sql.NullString
-	Result                sql.NullString
-	Miss                  sql.NullString
-	StrikeQuality         sql.NullString
-	Source                string
-	PreShotRecommendation sql.NullString
-	Completed             sql.NullBool
-}
-
 // ============================================================
 // SHOTS
 // Unique constraint: (hole_id, shot_number)
 // ============================================================
-func (q *Queries) ListShotsByHole(ctx context.Context, holeID int64) ([]ListShotsByHoleRow, error) {
+func (q *Queries) ListShotsByHole(ctx context.Context, holeID int64) ([]Shot, error) {
 	rows, err := q.db.QueryContext(ctx, listShotsByHole, holeID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []ListShotsByHoleRow
+	var items []Shot
 	for rows.Next() {
-		var i ListShotsByHoleRow
+		var i Shot
 		if err := rows.Scan(
 			&i.ID,
 			&i.HoleID,
@@ -1996,9 +1976,9 @@ func (q *Queries) ListShotsByHole(ctx context.Context, holeID int64) ([]ListShot
 			&i.Result,
 			&i.Miss,
 			&i.StrikeQuality,
-			&i.Source,
 			&i.PreShotRecommendation,
 			&i.Completed,
+			&i.Source,
 		); err != nil {
 			return nil, err
 		}
@@ -2014,8 +1994,7 @@ func (q *Queries) ListShotsByHole(ctx context.Context, holeID int64) ([]ListShot
 }
 
 const listShotsByHoleAndType = `-- name: ListShotsByHoleAndType :many
-SELECT id, hole_id, shot_number, shot_type, club,
-       result, miss, strike_quality, source, pre_shot_recommendation,completed
+SELECT id, hole_id, shot_number, shot_type, club, result, miss, strike_quality, pre_shot_recommendation, completed, source
 FROM shots
 WHERE hole_id   = ?
   AND shot_type = ?
@@ -2027,29 +2006,15 @@ type ListShotsByHoleAndTypeParams struct {
 	ShotType string
 }
 
-type ListShotsByHoleAndTypeRow struct {
-	ID                    int64
-	HoleID                int64
-	ShotNumber            int64
-	ShotType              string
-	Club                  sql.NullString
-	Result                sql.NullString
-	Miss                  sql.NullString
-	StrikeQuality         sql.NullString
-	Source                string
-	PreShotRecommendation sql.NullString
-	Completed             sql.NullBool
-}
-
-func (q *Queries) ListShotsByHoleAndType(ctx context.Context, arg ListShotsByHoleAndTypeParams) ([]ListShotsByHoleAndTypeRow, error) {
+func (q *Queries) ListShotsByHoleAndType(ctx context.Context, arg ListShotsByHoleAndTypeParams) ([]Shot, error) {
 	rows, err := q.db.QueryContext(ctx, listShotsByHoleAndType, arg.HoleID, arg.ShotType)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []ListShotsByHoleAndTypeRow
+	var items []Shot
 	for rows.Next() {
-		var i ListShotsByHoleAndTypeRow
+		var i Shot
 		if err := rows.Scan(
 			&i.ID,
 			&i.HoleID,
@@ -2059,9 +2024,9 @@ func (q *Queries) ListShotsByHoleAndType(ctx context.Context, arg ListShotsByHol
 			&i.Result,
 			&i.Miss,
 			&i.StrikeQuality,
-			&i.Source,
 			&i.PreShotRecommendation,
 			&i.Completed,
+			&i.Source,
 		); err != nil {
 			return nil, err
 		}

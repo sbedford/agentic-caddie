@@ -19,7 +19,7 @@ var GetHoleStatsToolDef = anthropic.ToolUnionParam{
 					"type":        "integer",
 					"description": "The course identifier, as returned by get_round_history or get_course_info.",
 				},
-				"tee": map[string]any{
+				"tee_name": map[string]any{
 					"type":        "string",
 					"description": "Tee name, typically Black or White",
 				},
