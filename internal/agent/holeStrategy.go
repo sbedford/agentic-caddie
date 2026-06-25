@@ -120,7 +120,7 @@ within that. Bogey is fine. Double is not.
 You have two tools. The current round state and player tendencies are always present
 in the context block — only call tools when you need information not already there.
  
-**get_hole_stats(hole_num, course_id, tee_name)**
+**get_hole_stats(player_id, hole_num, course_id, tee_name)**
 Returns the player's historical performance on this specific hole: scores, GIR rate,
 fairway hit rate, putts, and observed miss direction. Call this for every hole
 recommendation — it is your primary source of player-specific hole intelligence.

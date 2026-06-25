@@ -649,6 +649,6 @@ FROM holes h
 INNER JOIN course_holes ch ON h.course_hole_id=ch.id and ch.course_id = sqlc.arg(CourseId)
 INNER JOIN rounds r ON r.id = h.round_id
 INNER JOIN tees t ON t.course_id = ch.course_id and t.name = sqlc.arg(TeeName)
-WHERE h.hole_number=sqlc.arg(HoleNumber)
+WHERE h.hole_number=sqlc.arg(HoleNumber) AND r.played_at >= DATE('now', '-6 month')  and r.player_id = sqlc.arg(PlayerId)
 ORDER BY r.played_at DESC;
 

@@ -810,7 +810,7 @@ FROM holes h
 INNER JOIN course_holes ch ON h.course_hole_id=ch.id and ch.course_id = ?1
 INNER JOIN rounds r ON r.id = h.round_id
 INNER JOIN tees t ON t.course_id = ch.course_id and t.name = ?2
-WHERE h.hole_number=?3
+WHERE h.hole_number=?3 AND r.played_at >= DATE('now', '-6 month')  and r.player_id = ?4
 ORDER BY r.played_at DESC
 `
 
@@ -818,6 +818,7 @@ type GetHoleStatsParams struct {
 	Courseid   int64
 	Teename    string
 	Holenumber int64
+	Playerid   int64
 }
 
 type GetHoleStatsRow struct {
@@ -834,7 +835,12 @@ type GetHoleStatsRow struct {
 // Used by agent tools to summarise performance across different dimensions
 // ============================================================
 func (q *Queries) GetHoleStats(ctx context.Context, arg GetHoleStatsParams) ([]GetHoleStatsRow, error) {
-	rows, err := q.db.QueryContext(ctx, getHoleStats, arg.Courseid, arg.Teename, arg.Holenumber)
+	rows, err := q.db.QueryContext(ctx, getHoleStats,
+		arg.Courseid,
+		arg.Teename,
+		arg.Holenumber,
+		arg.Playerid,
+	)
 	if err != nil {
 		return nil, err
 	}

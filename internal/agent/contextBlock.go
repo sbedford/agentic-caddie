@@ -36,6 +36,8 @@ func toContextString(agentInput GetHoleStrategyRequest) string {
 	sb.WriteString("## Player Profile")
 	sb.WriteString("Name: ")
 	sb.WriteString(agentInput.Player.Name)
+	sb.WriteString("Player Id: ")
+	sb.WriteString(strconv.FormatInt(agentInput.Player.ID, 10))
 
 	sb.WriteString("\n## Current Round")
 

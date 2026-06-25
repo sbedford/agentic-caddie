@@ -12,9 +12,13 @@ import (
 var GetHoleStatsToolDef = anthropic.ToolUnionParam{
 	OfTool: &anthropic.ToolParam{
 		Name:        "get_hole_stats",
-		Description: anthropic.String("Returns historical per-round results for a specific hole at a specific course: date, score, points, putts, fairway hit, and GIR for every recorded round on that hole. Use this to look for patterns on individual holes rather than whole rounds."),
+		Description: anthropic.String("Returns historical per-round results for a specific player on a specific hole at a specific course: date, score, points, putts, fairway hit, and GIR for every recorded round on that hole. Use this to look for patterns on individual holes rather than whole rounds."),
 		InputSchema: anthropic.ToolInputSchemaParam{
 			Properties: map[string]any{
+				"player_id": map[string]any{
+					"type":        "integer",
+					"description": "The player identifier",
+				},
 				"course_id": map[string]any{
 					"type":        "integer",
 					"description": "The course identifier, as returned by get_round_history or get_course_info.",
@@ -39,6 +43,7 @@ type getHoleStatsInput struct {
 	CourseID int64  `json:"course_id"`
 	TeeName  string `json:"tee_name"`
 	HoleNum  int64  `json:"hole_num"`
+	PlayerID int64  `json:"player_id"`
 }
 
 type holeStatsHandler struct {
@@ -59,17 +64,16 @@ func (h *holeStatsHandler) handle(ctx context.Context, raw json.RawMessage) (str
 		Courseid:   in.CourseID,
 		Holenumber: in.HoleNum,
 		Teename:    in.TeeName,
+		Playerid:   in.PlayerID,
 	})
 	if err != nil {
 		return "", fmt.Errorf("query failed: %w", err)
 	}
 
 	if len(rows) == 0 {
-		return fmt.Sprintf("No recorded rounds found for hole %d at course %s.", in.HoleNum, in.CourseID), nil
+		return fmt.Sprintf("No recorded rounds found for Played %d on hole %d at course %s.", in.PlayerID, in.HoleNum, in.CourseID), nil
 	}
 
-	// Return raw rows as JSON — let the model do the reasoning over them,
-	// don't average/aggregate here.
 	out, err := json.Marshal(rows)
 	if err != nil {
 		return "", fmt.Errorf("marshal failed: %w", err)
