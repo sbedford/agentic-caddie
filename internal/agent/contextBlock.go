@@ -29,7 +29,7 @@ import (
 //	## Courses Played
 //	<List of courses in the database with round count at each.>
 
-func toContextString(agentInput GetAdviceRequest) string {
+func toContextString(agentInput GetHoleStrategyRequest) string {
 
 	var sb strings.Builder
 

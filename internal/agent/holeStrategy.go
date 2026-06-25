@@ -2,7 +2,9 @@ package agent
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"strconv"
 	"strings"
@@ -26,9 +28,28 @@ and miss patterns.
 Be direct. Don't be encouraging for its own sake, don't pad with generic golf wisdom,
 and don't restate the data. Reason over it and give a clear recommendation.
 
+# Output Format (Non-negotiable)
+Respond ONLY with this JSON object. No text before it, no text after it.
+All reasoning happens internally before you write a single character of output.
+
+## Fields
+* advice: Your specific recommendation on the strategy for the hole or shot.
+* club: The specific club recommended.
+* reasoning: Why this is the recommended approach.
+* confidence: How confident you are based on available data, expressed as a percentage.
+
+## Example
+{
+  "advice": "",
+  "club": "7-iron",
+  "reasoning": "",
+  "confidence": "80%"
+}
+
 # Objective
 
-Give the strategy most likely to produce the lowest score on this hole for this player.
+Give the strategy most likely to produce the lowest score on this hole for this player 
+respecting the golfing abilities their statistics and handicap infer.
 
 # Golf Domain Knowledge
 
@@ -110,8 +131,7 @@ containing hazards, bunkers and other features to be aware of.  Call this to und
 what the hole asks of the player — distances, trouble locations, and how the hole is designed to be played.
  
 **Tool use discipline:**
-- For a hole recommendation, always call get_hole_stats and get_course_info. Call
-  get_conditions only if conditions are absent from the context block and user message.
+- For a hole recommendation, always call get_hole_stats and get_hole_layout. 
 - Tools return raw data. All reasoning is your job — do not summarise what a tool
   returned, interpret it.
 - The context block already contains player tendencies and current round state. Do not
@@ -119,23 +139,14 @@ what the hole asks of the player — distances, trouble locations, and how the h
 
 ---
 
-# What Good Analysis Looks Like
-
-- Structure your response around findings, not around the tools you called.
-- Lead with the recommendation, not the reasoning — the player is standing on the tee, not reading a report
-- Keep it short — one clear recommendation with one or two supporting reasons, not an essay
-- Provide a clear and confident recommendation on club selection highlighting carry distance
-- Comment on historical performance where necessary but frame it in a positive way - "you score better when" over "don't do this"
----
-
 # Constraints
 
+- only ever reply with the Output Format defined below. No exceptions
 - Do not generalise from fewer than three data points. State "insufficient data" instead.
 - Do not restate what tools returned. Interpret the data; don't summarise it.
 - Do not offer technique or swing advice.
 - Do not pad with golf truisms unrelated to this player's data.
 - Do not make confident claims while hiding thin evidence inside hedging language.
-  If the evidence is thin, say so directly.
 
 ---
 
@@ -157,49 +168,45 @@ Keep all fields below 20 words at all times.
 * reasoning: A short description of why this is your recommended approach.
 * confidence: How confident are you on this stategy based on existing data
 
-## Example
-{ 
-	"advice": "", 
-  	"club": "7-iron",
-	"reasoning": "",
-	"confidence": "80%"
-}
 `
 
-func (this *GetAdviceRequest) BuildPrompt() string {
+func (this *GetHoleStrategyRequest) BuildPrompt() string {
 
 	var sb strings.Builder
-	fmt.Fprintf(&sb, "%v is playing Hole %v at %v. ",
+	fmt.Fprintf(&sb, "%v is playing shot %v on Hole %v at %v. ",
 		this.Player.Name,
-		this.ScopeForAdvice.Hole.HoleNumber,
+		this.ScopeForAdvice.ShotNumber,
+		this.ScopeForAdvice.HoleNumber,
 		this.CurrentRound.Course.Name)
 
-	currentLocation := this.ScopeForAdvice.CurrentLocation()
+	currentLocation := this.ScopeForAdvice.CurrentLocation
 	if currentLocation == models.LocationTee {
 		fmt.Fprintf(&sb, "Standing on the tee ")
 	} else if currentLocation == models.LocationRough {
-		fmt.Fprintf(&sb, "Standing in the %v rough ", this.ScopeForAdvice.LastShot().Miss)
+		fmt.Fprintf(&sb, "Standing in the %v rough ", this.ScopeForAdvice.LastShotMissDirection)
+	} else if currentLocation == models.LocationFairway {
+		fmt.Fprintf(&sb, "Standing in the fairway ")
 	} else if currentLocation == models.LocationBunker {
 		fmt.Fprintf(&sb, "Standing in a bunker ")
-		miss := this.ScopeForAdvice.LastShot().Miss
-		if miss != "" {
+		miss := this.ScopeForAdvice.LastShotMissDirection
+		if miss != nil && *miss != "" {
 			fmt.Fprintf(&sb, "on the %v ", miss)
 		}
 	} else if currentLocation == models.LocationHazard {
 		fmt.Fprintf(&sb, "Standing in a hazard ")
-		miss := this.ScopeForAdvice.LastShot().Miss
-		if miss != "" {
+		miss := this.ScopeForAdvice.LastShotMissDirection
+		if miss != nil && *miss != "" {
 			fmt.Fprintf(&sb, "on the %v ", miss)
 		}
 	} else if currentLocation == models.LocationGreen {
 		fmt.Fprintf(&sb, "Standing on the green")
 	}
 	if currentLocation != models.LocationGreen {
-		fmt.Fprintf(&sb, "%vm from the green ", strconv.FormatInt(this.ScopeForAdvice.Hole.Distance, 10))
+		fmt.Fprintf(&sb, "%vm from the pin ", strconv.FormatInt(this.ScopeForAdvice.DistanceToThePin, 10))
 	}
 
-	if this.ScopeForAdvice.FlagPosition != "" {
-		fmt.Fprintf(&sb, "to a %v pin ", string(this.ScopeForAdvice.FlagPosition))
+	if *this.ScopeForAdvice.Flag != "" {
+		fmt.Fprintf(&sb, "to a %v pin ", string(*this.ScopeForAdvice.Flag))
 	}
 
 	fmt.Fprintf(&sb, ".Provide a stratey")
@@ -207,15 +214,33 @@ func (this *GetAdviceRequest) BuildPrompt() string {
 	return sb.String()
 }
 
-type GetAdviceRequest struct {
+type GetHoleStrategyRequest struct {
 	Queries        *db.Queries
 	Player         models.Player
 	CurrentRound   models.Round
 	Rounds         []models.Round
-	ScopeForAdvice models.PlayedHole
+	ScopeForAdvice CurrentSituation
 }
 
-func GetAdvice(ctx context.Context, req GetAdviceRequest) AgentResponse {
+type CurrentSituation struct {
+	HoleNumber            int64                // Hole 4
+	ShotNumber            int                  // Second Shot
+	CurrentLocation       models.Location      // Rough
+	LastShotMissDirection *models.ShotResult   // Right
+	Flag                  *models.FlagPosition // Front-Left
+	DistanceToThePin      int64                // 160m
+}
+
+type GetHoleStrategyResponse struct {
+	Strategy      string `json:"advice"`
+	ClubSelection string `json:"club"`
+	Reasoning     string `json:"reasoning"`
+	Confidence    string `json:"confidence"`
+
+	Usage TokenUsage
+}
+
+func GetHoleStrategy(ctx context.Context, req GetHoleStrategyRequest) (*GetHoleStrategyResponse, error) {
 	client := anthropic.NewClient(option.WithAPIKey(os.Getenv("ANTHROPIC_API_KEY")))
 	agent := NewAgent(client, SystemPrompt)
 
@@ -225,5 +250,24 @@ func GetAdvice(ctx context.Context, req GetAdviceRequest) AgentResponse {
 	cb := toContextString(req)
 	prompt := req.BuildPrompt()
 
-	return agent.Run(ctx, cb, prompt)
+	agentResponse := agent.Run(ctx, cb, prompt)
+
+	if agentResponse.Err != nil {
+		return nil, agentResponse.Err
+
+	}
+
+	log.Printf("Agent Response [%v]", agentResponse.Response)
+
+	var holeStrategy GetHoleStrategyResponse
+
+	err := json.Unmarshal([]byte(agentResponse.Response), &holeStrategy)
+	if err != nil {
+		return nil, err
+	}
+
+	holeStrategy.Usage = agentResponse.Usage
+
+	return &holeStrategy, nil
+
 }

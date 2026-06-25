@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"strings"
 
 	"github.com/anthropics/anthropic-sdk-go"
 )
@@ -36,6 +37,21 @@ func NewAgent(client anthropic.Client, systemPrompt string) *Agent {
 func (a *Agent) RegisterTool(def anthropic.ToolUnionParam, name string, h ToolHandler) {
 	a.tools = append(a.tools, def)
 	a.handlers[name] = h
+}
+
+func cleanJSONString(input string) string {
+	// Trim surrounding whitespace and newlines
+	cleaned := strings.TrimSpace(input)
+
+	// Remove the leading markdown code block markers
+	cleaned = strings.TrimPrefix(cleaned, "```json")
+	cleaned = strings.TrimPrefix(cleaned, "```")
+
+	// Remove the trailing markdown code block marker
+	cleaned = strings.TrimSuffix(cleaned, "```")
+
+	// Trim again in case there are remaining spaces/newlines inside the code blocks
+	return strings.TrimSpace(cleaned)
 }
 
 // Run executes the full agent loop for a single user request.
@@ -86,7 +102,7 @@ func (a *Agent) Run(ctx context.Context, contextBlock, userMessage string) Agent
 			}
 
 			return AgentResponse{
-				Response: out,
+				Response: cleanJSONString("{" + out),
 				Err:      nil,
 				Usage:    agentTokens,
 			}
@@ -126,5 +142,13 @@ func (a *Agent) Run(ctx context.Context, contextBlock, userMessage string) Agent
 
 		// Tool results go back in as a user message; loop continues.
 		messages = append(messages, anthropic.NewUserMessage(toolResults...))
+
+		// Prefill the assistant response to enforce JSON-only output
+		messages = append(messages, anthropic.MessageParam{
+			Role: anthropic.MessageParamRole(anthropic.MessageParamRoleAssistant),
+			Content: []anthropic.ContentBlockParamUnion{
+				anthropic.NewTextBlock("{"),
+			},
+		})
 	}
 }

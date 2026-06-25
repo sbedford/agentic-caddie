@@ -4,9 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"strconv"
 
 	"charm.land/huh/v2"
+	"charm.land/huh/v2/spinner"
+
+	"github.com/sbedford/agentic-caddie/internal/agent"
 	"github.com/sbedford/agentic-caddie/internal/db"
 	"github.com/sbedford/agentic-caddie/internal/models"
 	"github.com/sbedford/agentic-caddie/internal/services"
@@ -42,8 +46,6 @@ func renderPuttOutForm(ctx context.Context, q *db.Queries, currentHole *models.P
 			huh.NewInput().
 				Title("Number of Putts").
 				Value(&numberOfPutts).
-				// Validating fields is easy. The form will mark erroneous fields
-				// and display error messages accordingly.
 				Validate(func(str string) error {
 					d, err := strconv.Atoi(numberOfPutts)
 					if err != nil || d < 0 {
@@ -78,6 +80,104 @@ func renderPuttOutForm(ctx context.Context, q *db.Queries, currentHole *models.P
 	}
 
 	return nil
+}
+
+func captureDistanceFromPin(ctx context.Context, q *db.Queries, currentHole *models.PlayedHole) (int64, error) {
+
+	if currentHole == nil {
+		return -1, fmt.Errorf("currentHole cannot be nil for showHoleDetails")
+	}
+
+	distance := ""
+
+	holeForm := huh.NewForm(
+		huh.NewGroup(
+			huh.NewInput().
+				Title("Distance to the Pin").
+				Value(&distance).
+				Validate(func(str string) error {
+					d, err := strconv.Atoi(str)
+					if err != nil || d <= 10 {
+						return errors.New("Please enter a correct distance to the pin greater than 10m")
+					}
+					return nil
+				}),
+		),
+	)
+
+	if err := holeForm.Run(); err != nil {
+		return -1, err
+	}
+
+	d, _ := strconv.ParseInt(distance, 10, 64)
+
+	return d, nil
+}
+
+func renderCaddyAdviceForm(ctx context.Context, q *db.Queries, currentHole *models.PlayedHole) error {
+
+	// HoleNumber            int64                // Hole 4
+	// ShotNumber            int64                // Second Shot
+	// CurrentLocation       models.Location      // Rough
+	// LastShotMissDirection *models.ShotResult   // Right
+	// Flag                  *models.FlagPosition // Front-Left
+	// DistanceToThePin      int64                // 160m
+
+	if currentHole == nil {
+		return fmt.Errorf("currentHole cannot be nil for renderCaddyAdviceForm")
+	}
+
+	agentService := services.GetAgentService(ctx, q)
+	var agentResponse *agent.GetHoleStrategyResponse
+
+	// agentResponse := agent.GetHoleStrategyResponse{
+	// 	Strategy:      "Hit 3-iron left of centre to avoid right OB and long bunker. Leave 100-110m approach.",
+	// 	ClubSelection: "3i",
+	// 	Reasoning:     "Stroke index 4 with 303 yard distance means par is the target. OB right eliminates driver/3-hybrid. 3-iron RC190 leaves ~110m in. History shows you score when hitting fairway (50% of pars vs 20% of bogeys from rough). Left miss into scrub is recoverable; right OB is catastrophic.",
+	// }
+
+	distance := currentHole.DistanceToPin
+
+	// we need to know the distance
+	if currentHole.CurrentLocation() != models.LocationTee {
+		distance, _ = captureDistanceFromPin(ctx, q, currentHole)
+	}
+
+	err := spinner.New().
+		Context(ctx).
+		Title("Asking your caddy").
+		ActionWithErr(func(ctx context.Context) error {
+			var e error
+			agentResponse, e = agentService.GetRecommendation(*currentHole, distance)
+			return e
+		}).
+		Run()
+
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	holeForm := huh.NewForm(
+		huh.NewGroup(
+			huh.NewNote().
+				Title("Hole Number").
+				Description(agentResponse.Strategy).WithHeight(6),
+			huh.NewNote().
+				Title("Club Recommenddation").
+				Description(agentResponse.ClubSelection).WithHeight(1),
+		),
+		huh.NewGroup(
+			huh.NewNote().
+				Title("Reason").
+				Description(agentResponse.Reasoning).WithHeight(7),
+		),
+	).WithLayout(huh.LayoutGrid(2, 3))
+
+	if err := holeForm.Run(); err != nil {
+		return err
+	}
+
+	return showHoleDetails(ctx, q, currentHole)
 }
 
 func showHoleDetails(ctx context.Context, q *db.Queries, currentHole *models.PlayedHole) error {
@@ -127,6 +227,7 @@ func showHoleDetails(ctx context.Context, q *db.Queries, currentHole *models.Pla
 						return []huh.Option[string]{
 							huh.NewOption("Set Flag Position", "flag"),
 							huh.NewOption("Set Distance from Pin", "distance"),
+							huh.NewOption("Ask the Caddy", "caddy"),
 							huh.NewOption("Record Shot", "record"),
 							huh.NewOption("Wipe Hole", "wipe"),
 						}
@@ -143,6 +244,8 @@ func showHoleDetails(ctx context.Context, q *db.Queries, currentHole *models.Pla
 
 	if action == "record" {
 		return RenderRecordShotScreen(ctx, q, currentHole)
+	} else if action == "caddy" {
+		return renderCaddyAdviceForm(ctx, q, currentHole)
 	} else if action == "flag" {
 		return RenderSetFlagPositionScreen(ctx, q, currentHole)
 	} else if action == "distance" {

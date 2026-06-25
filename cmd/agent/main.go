@@ -15,6 +15,7 @@ import (
 )
 
 func main() {
+
 	log.Println("Starting Agent")
 
 	cfg := config.Load()
@@ -47,7 +48,7 @@ func main() {
 	currentRound, err := roundService.GetRoundById(currentRoundId)
 	nextHole := currentRound.Tee.GetHole(nextHoleNumber)
 
-	req := agent.GetAdviceRequest{
+	req := agent.GetHoleStrategyRequest{
 		Queries:      queries,
 		Player:       *golfer,
 		Rounds:       previousRounds,
@@ -58,13 +59,13 @@ func main() {
 		},
 	}
 
-	response := agent.GetAdvice(context.Background(), req)
-	if response.Err != nil {
-		log.Println("agent error: ", response.Err)
+	response, err := agent.GetHoleStrategy(context.Background(), req)
+	if err != nil {
+		log.Println("agent error: ", err)
 		return
 	}
 
-	log.Println(response.Response)
+	log.Println(response.Strategy)
 	log.Println("------------------------")
 	log.Println("Total Input Tokens:", response.Usage.TotalInputTokens)
 	log.Println("Total Output Tokens:", response.Usage.TotalOutputTokens)

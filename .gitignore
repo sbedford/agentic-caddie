@@ -42,3 +42,4 @@ go.work.sum
 main
 
 .vscode
+*.log

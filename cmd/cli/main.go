@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"log"
+	"os"
 
 	cli "github.com/sbedford/agentic-caddie/internal/cli"
 
@@ -22,6 +23,15 @@ func main() {
 	defer database.Close()
 
 	queries := db.New(database)
+
+	file, err := os.OpenFile("data/app.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
+	if err != nil {
+		log.Fatalf("Failed to open log file: %v", err)
+	}
+	defer file.Close() // Ensure the file handles close properly when main exits
+
+	// Redirect all standard log package outputs to our file
+	log.SetOutput(file)
 
 	err = cli.RenderForm(context.Background(), queries)
 	if err != nil {
