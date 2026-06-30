@@ -247,7 +247,11 @@ func showRecordShotScreen(ctx context.Context, q *db.Queries, currentHole *model
 	}
 
 	if action == "save" {
-		currentHole.RecordShot(info.Distance, info.Type, info.Club, info.Location, info.missDirection, info.strike, info.agentRecommendation)
+		_, err := currentHole.RecordShot(info.Distance, info.Type, info.Club, info.Location, info.missDirection, info.strike, info.agentRecommendation)
+
+		if err != nil {
+			return err
+		}
 
 		roundService := services.GetRoundsService(ctx, q)
 		roundService.PersistRound(currentHole.Round)

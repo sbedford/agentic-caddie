@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"strconv"
+	"time"
 
 	"charm.land/huh/v2"
 	"github.com/sbedford/agentic-caddie/internal/db"
@@ -22,7 +23,7 @@ func RenderLoadRoundScreen(ctx context.Context, q *db.Queries, player *models.Pl
 
 	roundOptions := make([]huh.Option[string], len(rounds))
 	for i, u := range rounds {
-		roundOptions[i] = huh.NewOption(fmt.Sprintf("%v round at %v", u.CompetitionType, u.Course.Name, u.RoundDate), strconv.FormatInt(int64(u.ID), 10))
+		roundOptions[i] = huh.NewOption(fmt.Sprintf("%v round at %v on %v", u.CompetitionType, u.Course.Name, u.RoundDate.Format(time.DateOnly)), strconv.FormatInt(int64(u.ID), 10))
 	}
 
 	var selectedRound string

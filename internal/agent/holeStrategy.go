@@ -202,14 +202,14 @@ func (this *GetHoleStrategyRequest) BuildPrompt() string {
 		fmt.Fprintf(&sb, "Standing on the green")
 	}
 	if currentLocation != models.LocationGreen {
-		fmt.Fprintf(&sb, "%vm from the pin ", strconv.FormatInt(this.ScopeForAdvice.DistanceToThePin, 10))
+		fmt.Fprintf(&sb, "%vm from the pin", strconv.FormatInt(this.ScopeForAdvice.DistanceToThePin, 10))
 	}
 
 	if *this.ScopeForAdvice.Flag != "" {
-		fmt.Fprintf(&sb, "to a %v pin ", string(*this.ScopeForAdvice.Flag))
+		fmt.Fprintf(&sb, " to a %v pin", string(*this.ScopeForAdvice.Flag))
 	}
 
-	fmt.Fprintf(&sb, ".Provide a stratey")
+	fmt.Fprintf(&sb, ". Provide a strategy")
 
 	return sb.String()
 }

@@ -1,5 +1,10 @@
 # agentic-caddie
 
+## Setup
+export ANTHROPIC_API_KEY="your-api-key-here"
+
+Create the database - use Bootstrap binary
+
 ## Commands for build/test
 
 ### Build Commands
@@ -18,3 +23,6 @@ swag init -g cmd/api/main.go -o cmd/api/docs
 
 ### Run Web Server
 npm run dev (in web folder)
+
+
+

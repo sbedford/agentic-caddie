@@ -55,17 +55,15 @@ func RenderForm(ctx context.Context, q *db.Queries) error {
 	playerService := services.GetPlayerService(ctx, q)
 	playerId, err := strconv.ParseInt(selectedPlayer, 10, 64)
 	if err != nil {
-		fmt.Errorf(err.Error())
+		return err
 	}
 
 	player, err := playerService.GetPlayer(playerId)
 	if err != nil {
-		fmt.Errorf(err.Error())
+		return err
 	}
 
-	// Exit early or branch logic if they choose something else
 	if selectedOption == "load" {
-		// Handle load round sequence here...
 		return RenderLoadRoundScreen(ctx, q, player)
 	}
 
